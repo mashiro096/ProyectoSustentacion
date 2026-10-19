@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SingLing - Portal Estudiante</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .brand-font { font-family: 'Libre Caslon Text', serif; }
+  </style>
+</head>
+
+<body class="bg-white h-screen overflow-hidden text-gray-800">
+
+  <!-- ==================== 1. SPLASH SCREEN 1 ==================== -->
+  <div id="splash1" class="flex flex-col items-center justify-center h-screen transition-opacity duration-1000 opacity-100">
+    <img src="img/logo.png" alt="Logo SingLing" class="w-48 mb-4 animate-pulse" />
+    <h1 class="text-3xl font-normal text-[#2470BB] brand-font">SingLing</h1>
+    <p class="text-xs text-gray-400 uppercase tracking-widest mt-1">Plataforma Educativa de Inglés</p>
+  </div>
+
+  <!-- ==================== 2. SPLASH SCREEN 2 (BIENVENIDA) ==================== -->
+  <div id="splash2" class="absolute inset-0 flex flex-col items-center justify-center text-center opacity-0 hidden transition-opacity duration-1000 p-6 bg-white z-10">
+    <div class="absolute top-4 right-4">
+      <a href="admin.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#2470BB] rounded-xl text-xs font-bold hover:bg-blue-100 transition">
+        <i class="fa-solid fa-user-gear"></i>
+        <span>Panel Docente</span>
+      </a>
+    </div>
+
+    <img src="img/bienvenido.png" alt="Bienvenido" class="w-72 mb-6 drop-shadow-sm" />
+    <h1 class="text-2xl font-bold mb-2 animate-bounce text-[#2470BB] brand-font">¡Bienvenido!</h1>
+    <p class="text-gray-600 max-w-xs mb-6 text-sm leading-relaxed">
+      Estamos aquí para ayudarte en tu proceso de aprendizaje en la materia de inglés.
+      Junto con actividades y recursos interactivos.
+    </p>
+    <button id="btnEmpezar" class="group relative overflow-hidden rounded-xl bg-sky-400 hover:bg-sky-500 px-8 py-3.5 font-sans uppercase font-bold text-white shadow-lg shadow-sky-400/30 transition-all active:scale-95">
+      Empezar
+    </button>
+  </div>
+
+  <!-- ==================== 3. VISTA DE GRADOS ==================== -->
+  <div id="view-grades" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-10 flex flex-col">
+    <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
+      <div class="flex items-center gap-3">
+        <img src="img/logo.png" alt="Logo SingLing" class="w-10 h-10 object-contain" />
+        <h1 class="text-xl font-semibold text-[#2470BB] brand-font">SingLing</h1>
+      </div>
+      <a href="admin.html" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-chalkboard-user text-[#2470BB]"></i>
+        <span>Docente</span>
+      </a>
+    </header>
+
+    <div class="px-6 pt-4 pb-2">
+      <input type="text" id="buscar-curso" placeholder="Buscar grado o curso..." class="w-full px-4 py-2.5 rounded-xl bg-gray-100 outline-none text-sm focus:ring-2 focus:ring-sky-200" />
+    </div>
+
+    <h2 class="text-center text-2xl font-bold my-3 text-gray-800">Grados de Inglés</h2>
+
+    <div id="lista-grados" class="p-6 bg-gray-50 space-y-4 flex-1 overflow-y-auto"></div>
+  </div>
+
+  <!-- ==================== 4. VISTA DE MATERIAS ==================== -->
+  <div id="view-subjects" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-20 flex flex-col">
+    <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
+      <div class="flex items-center gap-3">
+        <button onclick="navigate('view-subjects', 'view-grades')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <div>
+          <h1 class="text-lg font-bold text-[#2470BB]">Materias</h1>
+          <p id="subtitulo-grado" class="text-[11px] text-gray-400 uppercase font-semibold"></p>
+        </div>
+      </div>
+      <img src="img/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+    </header>
+
+    <div class="p-6 bg-gray-50 flex-1 overflow-y-auto">
+      <p class="text-xs text-gray-500 mb-4 font-semibold uppercase tracking-wider">Asignaturas disponibles:</p>
+      <div id="lista-materias" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+  </div>
+
+  <!-- ==================== 5. VISTA DE UNIDADES ==================== -->
+  <div id="view-units" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-30 flex flex-col">
+    <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
+      <div class="flex items-center gap-3">
+        <button onclick="navigate('view-units', 'view-subjects')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <div class="flex items-center gap-2">
+          <img src="img/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+          <span class="font-semibold text-[#2470BB]">SingLing</span>
+        </div>
+      </div>
+      <div class="w-6"></div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+      <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold text-[#2470BB] mb-1">¡Bienvenido!</h1>
+        <h2 id="titulo-materia-unidades" class="text-xl font-semibold text-gray-800">Unidades de Aprendizaje</h2>
+        <p class="text-gray-500 text-xs mt-1">Seleccione la unidad a profundizar</p>
+      </div>
+
+      <div id="lista-unidades" class="space-y-6 max-w-xl mx-auto"></div>
+    </div>
+  </div>
+
+  <!-- ==================== 6. VISTA DETALLE DE UNIDAD (RECURSOS / ACTIVIDADES) ==================== -->
+  <div id="view-detail" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-40 flex flex-col">
+    <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
+      <div class="flex items-center gap-3">
+        <button onclick="navigate('view-detail', 'view-units')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <div class="flex items-center gap-2">
+          <img src="img/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+          <span class="font-semibold text-[#2470BB]">SingLing</span>
+        </div>
+      </div>
+      <span id="breadcrumb-unidad" class="text-xs text-gray-400 font-semibold uppercase truncate max-w-[150px]"></span>
+    </header>
+
+    <!-- Contenido dinámico según la pestaña activa -->
+    <div id="unit-content" class="flex-1 overflow-y-auto p-6 bg-gray-50"></div>
+
+    <!-- Pestañas inferiores Recursos y Actividades -->
+    <div class="border-t py-3 flex justify-around bg-white shadow-sm">
+      <button id="tabRecursos" onclick="switchTab('recursos')" class="flex flex-col items-center text-[#2470BB] transition">
+        <span class="text-2xl">📖</span>
+        <p class="text-xs font-semibold">Recursos</p>
+      </button>
+      <button id="tabActividades" onclick="switchTab('actividades')" class="flex flex-col items-center text-gray-400 transition">
+        <span class="text-2xl">📝</span>
+        <p class="text-xs font-semibold">Actividades</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 7. PANTALLA DEL QUIZ INTERACTIVO (TOTALMENTE AUTOMÁTICO) ==================== -->
+  <div id="quiz-screen" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-50 flex flex-col">
+    <!-- Header del Quiz -->
+    <div class="flex items-center justify-between px-6 py-4 border-b bg-white">
+      <button id="btnExitQuiz" class="text-2xl text-gray-400 hover:text-gray-700 transition">✕</button>
+      <div class="flex-1 text-center">
+        <span id="quiz-counter-text" class="text-gray-400 text-xs font-semibold uppercase tracking-widest">Pregunta 1</span>
+      </div>
+      <div class="w-8"></div>
+    </div>
+
+    <!-- Área del Quiz -->
+    <div class="flex-1 p-6 bg-white overflow-y-auto flex flex-col justify-between max-w-xl mx-auto w-full">
+      <div>
+        <!-- Contenedor de Imagen de Referencia (se oculta automáticamente si la pregunta no tiene imagen) -->
+        <div id="quiz-image-box" class="w-full h-48 bg-gray-100 rounded-3xl mb-6 overflow-hidden flex items-center justify-center p-2 hidden">
+          <img id="quiz-image" src="" class="h-full w-full object-contain" alt="Question illustration" />
+        </div>
+
+        <h3 id="quiz-question" class="text-2xl font-bold text-gray-800 mb-8 leading-tight text-center md:text-left"></h3>
+
+        <!-- Opciones Dinámicas Automáticas: Selección Múltiple o Drag & Drop -->
+        <div id="quiz-options" class="space-y-4"></div>
+      </div>
+
+      <!-- Botón Comprobar / Siguiente -->
+      <div class="p-4 mt-auto">
+        <button id="btnCheckAnswer" disabled class="w-full bg-gray-300 text-white py-4 rounded-2xl font-bold text-lg shadow-lg transition-all cursor-not-allowed">
+          Comprobar Respuesta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A FIRESTORE ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // 1. Configuración de Firebase Firestore
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMFxBxA6kfsbHylw3m0_QCl5fhJGAMJZ0",
+      authDomain: "paapre-8c81a.firebaseapp.com",
+      projectId: "paapre-8c81a",
+      storageBucket: "paapre-8c81a.firebasestorage.app",
+      messagingSenderId: "662329592959",
+      appId: "1:662329592959:web:c960ab79783d7f9346034a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 2. Grados de Educación General Básica
+    const gradesData = [
+      { id: "1", name: "1ero", fullName: "1ero de Básica", desc: "Encuentras los recursos y actividades aquí" },
+      { id: "2", name: "2ndo", fullName: "2do de Básica", desc: "Encuentras los recursos y actividades aquí" },
+      { id: "3", name: "3ero", fullName: "3ero de Básica", desc: "Encuentras los recursos y actividades aquí" },
+      { id: "4", name: "4to", fullName: "4to de Básica", desc: "Encuentras los recursos y actividades aquí" },
+      { id: "5", name: "5to", fullName: "5to de Básica", desc: "Encuentras los recursos y actividades aquí" },
+      { id: "6", name: "6to", fullName: "6to de Básica", desc: "Encuentras los recursos y actividades aquí", highlighted: true },
+      { id: "7", name: "7to", fullName: "7mo de Básica", desc: "Encuentras los recursos y actividades aquí" }
+    ];
+
+    // 3. Variables de Estado de Navegación
+    let currentGradeId = "6";
+    let currentGradeName = "6to de Básica";
+    let currentSubjectId = null;
+    let currentSubjectName = "";
+    let currentUnitId = null;
+    let currentUnitTitle = "";
+
+    // 4. Variables del Motor de Quiz (Inicialmente VACÍO - Se llena automáticamente de Firestore)
+    let unitQuestions = [];
+    let quizData = [];
+    let currentQuestionIndex = 0;
+    let selectedValue = null;
+    let score = 0;
+
+    // 5. Navegación fluida entre pantallas
+    window.navigate = (from, to) => {
+      const fromEl = document.getElementById(from);
+      const toEl = document.getElementById(to);
+      if (fromEl) {
+        fromEl.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => {
+          fromEl.classList.add('hidden');
+          if (toEl) {
+            toEl.classList.remove('hidden');
+            setTimeout(() => toEl.classList.add('opacity-100'), 50);
+          }
+        }, 300);
+      }
+    };
+
+    // 6. Renderizar Grados
+    window.renderGrades = () => {
+      const container = document.getElementById('lista-grados');
+      container.innerHTML = '';
+      gradesData.forEach(g => {
+        const isHighlight = g.highlighted ? 'border-l-4 border-[#2470BB]' : '';
+        container.innerHTML += `
+          <div onclick="loadSubjects('${g.id}', '${g.fullName}')" class="flex items-center gap-4 p-4 bg-white shadow-md rounded-[10px] cursor-pointer transition hover:-translate-y-1 active:scale-95 ${isHighlight}">
+            <img src="img/grado6.jpg" class="w-[70px] rounded-[10px] object-cover" />
+            <div class="flex-1">
+              <p class="font-bold text-xl ${g.highlighted ? 'text-[#2470BB]' : 'text-gray-800'}">${g.name}</p>
+              <p class="text-xs text-gray-500">${g.desc}</p>
+            </div>
+            <span class="text-sky-400 font-bold text-lg">→</span>
+          </div>`;
+      });
+      navigate('splash2', 'view-grades');
+    };
+
+    // 7. Cargar Materias dinámicas desde Firestore
+    window.loadSubjects = async (gradeId, gradeFullName) => {
+      currentGradeId = gradeId;
+      currentGradeName = gradeFullName;
+      document.getElementById('subtitulo-grado').innerText = gradeFullName;
+      navigate('view-grades', 'view-subjects');
+
+      const container = document.getElementById('lista-materias');
+      container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias...</div>';
+
+      try {
+        const q = query(collection(db, "materias"), where("gradoId", "==", gradeId));
+        const snap = await getDocs(q);
+        container.innerHTML = '';
+
+        if (snap.empty) {
+          container.innerHTML = `
+            <div class="col-span-full p-8 text-center bg-white rounded-2xl shadow-sm border border-gray-100">
+              <p class="text-gray-600 font-semibold text-sm">No hay materias registradas para este grado</p>
+              <p class="text-xs text-gray-400 mt-1">El docente puede agregarlas desde el Panel Docente.</p>
+            </div>`;
+          return;
+        }
+
+        snap.forEach(doc => {
+          const data = doc.data();
+          container.innerHTML += `
+            <div onclick="loadUnits('${doc.id}', '${data.nombre}')" class="bg-white p-5 rounded-2xl shadow border-b-4 border-sky-400 text-center hover:bg-sky-50 transition cursor-pointer active:scale-95">
+              <div class="text-3xl mb-2">📚</div>
+              <span class="font-bold text-base text-gray-800 block">${data.nombre}</span>
+              <span class="text-xs text-sky-500 font-semibold mt-1 inline-block">Ver unidades</span>
+            </div>`;
+        });
+      } catch (err) {
+        console.error("Error al cargar materias:", err);
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al conectar con Firestore.</div>';
+      }
+    };
+
+    // 8. Cargar Unidades dinámicas desde Firestore
+    window.loadUnits = async (subjectId, subjectName) => {
+      currentSubjectId = subjectId;
+      currentSubjectName = subjectName;
+      document.getElementById('titulo-materia-unidades').innerText = `${currentGradeName} - ${subjectName}`;
+      navigate('view-subjects', 'view-units');
+
+      const container = document.getElementById('lista-unidades');
+      container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades...</div>';
+
+      try {
+        const q = query(collection(db, "unidades"), where("materiaId", "==", subjectId));
+        const snap = await getDocs(q);
+        container.innerHTML = '';
+
+        if (snap.empty) {
+          container.innerHTML = `
+            <div class="p-8 text-center bg-white rounded-2xl shadow-sm border border-gray-100">
+              <p class="text-gray-600 font-semibold text-sm">No hay unidades registradas aún</p>
+              <p class="text-xs text-gray-400 mt-1">El docente puede crearlas desde el Panel Docente.</p>
+            </div>`;
+          return;
+        }
+
+        let idx = 1;
+        snap.forEach(doc => {
+          const data = doc.data();
+          const unitImg = idx === 1 ? 'img/6unidad/mapa1.jpg' : (idx === 2 ? 'img/6unidad/familia.jpg' : 'img/6unidad/feriados.jpg');
+          container.innerHTML += `
+            <div onclick="openUnit('${doc.id}', '${data.titulo}')" class="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transition active:scale-95 duration-300 hover:shadow-xl">
+              <div class="h-44 bg-blue-100 flex items-center justify-center">
+                <img src="${unitImg}" class="h-32 object-contain" onerror="this.src='img/grado6.jpg'" />
+              </div>
+              <div class="p-5 flex justify-between items-center">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-800">${data.titulo}</h3>
+                  <p class="text-gray-500 text-xs mt-0.5">Recursos y evaluación interactiva</p>
+                </div>
+                <span class="text-sky-400 font-bold text-xl">→</span>
+              </div>
+            </div>`;
+          idx++;
+        });
+      } catch (err) {
+        console.error("Error al cargar unidades:", err);
+      }
+    };
+
+    // 9. Abrir Detalle de la Unidad
+    window.openUnit = (id, title) => {
+      currentUnitId = id;
+      currentUnitTitle = title;
+      document.getElementById('breadcrumb-unidad').innerText = title;
+      navigate('view-units', 'view-detail');
+      switchTab('recursos');
+    };
+
+    // 10. Alternar Pestañas Recursos y Actividades
+    window.switchTab = async (tab) => {
+      const content = document.getElementById('unit-content');
+      const btnRec = document.getElementById('tabRecursos');
+      const btnAct = document.getElementById('tabActividades');
+
+      if (tab === 'recursos') {
+        btnRec.className = "flex flex-col items-center text-[#2470BB] transition";
+        btnAct.className = "flex flex-col items-center text-gray-400 transition";
+
+        content.innerHTML = `
+          <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
+          <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
+          <div id="recursos-container" class="space-y-3">
+            <div class="text-center py-6 text-gray-400">Cargando recursos...</div>
+          </div>`;
+
+        try {
+          const q = query(collection(db, "recursos"), where("unidadId", "==", currentUnitId));
+          const snap = await getDocs(q);
+          const recContainer = document.getElementById('recursos-container');
+          recContainer.innerHTML = '';
+
+          if (snap.empty) {
+            recContainer.innerHTML = `
+              <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
+                <span class="text-3xl mb-2 block">📖</span>
+                <p class="text-gray-700 font-semibold text-sm">No hay recursos adjuntos para esta unidad</p>
+                <p class="text-xs text-gray-400 mt-1">El docente puede agregar documentos PDF y videos explicativos.</p>
+              </div>`;
+            return;
+          }
+
+          snap.forEach(doc => {
+            const data = doc.data();
+            const isPdf = data.tipo === 'pdf';
+            recContainer.innerHTML += `
+              <a href="${data.url}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-white rounded-2xl shadow-sm hover:shadow border-l-4 ${isPdf ? 'border-red-400' : 'border-sky-400'} transition group">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="text-2xl">${isPdf ? '📄' : '🎥'}</span>
+                    <div>
+                      <p class="font-bold text-gray-800 text-sm group-hover:text-[#2470BB] transition">${data.titulo}</p>
+                      <p class="text-[11px] text-gray-400">${isPdf ? 'Documento PDF' : 'Video Tutorial'}</p>
+                    </div>
+                  </div>
+                  <span class="text-xs text-[#2470BB] font-bold bg-blue-50 px-3 py-1 rounded-xl">Abrir ↗</span>
+                </div>
+              </a>`;
+          });
+        } catch (err) {
+          console.error("Error al cargar recursos:", err);
+        }
+      } else {
+        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE FIRESTORE
+        btnAct.className = "flex flex-col items-center text-[#2470BB] transition";
+        btnRec.className = "flex flex-col items-center text-gray-400 transition";
+
+        content.innerHTML = `
+          <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Actividades</h1>
+          <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
+          <div id="actividades-container" class="space-y-4 max-w-lg mx-auto">
+            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en Firestore...</div>
+          </div>`;
+
+        try {
+          const q = query(collection(db, "preguntas"), where("unidadId", "==", currentUnitId));
+          const snap = await getDocs(q);
+          const actContainer = document.getElementById('actividades-container');
+          actContainer.innerHTML = '';
+
+          // 1. Si no hay preguntas en Firestore para esta unidad:
+          if (snap.empty) {
+            unitQuestions = [];
+            actContainer.innerHTML = `
+              <div class="p-8 bg-white rounded-2xl shadow-sm border border-dashed border-gray-200 text-center">
+                <span class="text-3xl mb-2 block">📝</span>
+                <p class="text-gray-700 font-semibold text-base">No hay actividades publicadas aún</p>
+                <p class="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
+                  El test está listo en el sistema, pero se encuentra vacío a la espera de que el docente configure preguntas para esta unidad desde el Panel Docente.
+                </p>
+              </div>`;
+            return;
+          }
+
+          // 2. Si hay preguntas en Firestore, se cargan de forma automática:
+          unitQuestions = [];
+          snap.forEach(doc => {
+            const data = doc.data();
+            unitQuestions.push({
+              id: doc.id,
+              question: data.pregunta,
+              image: data.imagen || "",
+              options: data.opciones || [],
+              blocks: data.opciones || [],
+              correct: data.correcta,
+              type: data.tipo === "fill" ? "drag-and-drop" : "multiple"
+            });
+          });
+
+          const total = unitQuestions.length;
+          actContainer.innerHTML = `
+            <div id="start-unit1-test" onclick="window.startQuiz()" class="flex items-center gap-4 p-5 bg-white shadow-md rounded-2xl border-b-4 border-sky-400 cursor-pointer transition hover:bg-gray-50 active:scale-95 duration-300">
+              <span class="text-3xl">📋</span>
+              <div class="flex-1">
+                <h3 class="font-bold text-gray-800 text-lg">${currentUnitTitle} - Test Interactivo</h3>
+                <p class="text-xs text-gray-500">${total} ${total === 1 ? 'pregunta sincronizada desde Firestore' : 'preguntas sincronizadas desde Firestore'}</p>
+              </div>
+              <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
+            </div>
+
+            <div class="p-4 bg-sky-50/70 border border-sky-100 rounded-2xl text-xs text-sky-800 leading-relaxed">
+              <p class="font-bold mb-1">💡 Test Automático</p>
+              Las preguntas han sido cargadas automáticamente desde la base de datos de esta unidad. Haz clic en la tarjeta superior para iniciar el test interactivo.
+            </div>`;
+        } catch (err) {
+          console.error("Error al cargar actividades:", err);
+          document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos.</div>';
+        }
+      }
+    };
+
+    // ==================== 11. MOTOR DE EVALUACIÓN AUTOMÁTICO ====================
+    window.startQuiz = () => {
+      if (!unitQuestions || unitQuestions.length === 0) {
+        alert("El test está vacío. No hay preguntas configuradas para esta unidad.");
+        return;
+      }
+
+      // Barajar automáticamente las preguntas obtenidas de Firestore
+      quizData = [...unitQuestions].sort(() => 0.5 - Math.random());
+      currentQuestionIndex = 0;
+      score = 0;
+      loadQuestion(currentQuestionIndex);
+
+      const detail = document.getElementById('view-detail');
+      const quiz = document.getElementById('quiz-screen');
+      detail.classList.replace('opacity-100', 'opacity-0');
+      setTimeout(() => {
+        detail.classList.add('hidden');
+        quiz.classList.remove('hidden');
+        setTimeout(() => quiz.classList.add('opacity-100'), 50);
+      }, 400);
+    };
+
+    window.loadQuestion = (index) => {
+      const data = quizData[index];
+      if (!data) return;
+
+      document.getElementById('quiz-counter-text').innerText = `Pregunta ${index + 1} de ${quizData.length}`;
+      document.getElementById('quiz-question').innerText = data.type === "drag-and-drop" ? "Lee y completa la frase correctamente:" : data.question;
+
+      // Imagen de referencia (se muestra solo si la pregunta tiene imagen definida)
+      const imgBox = document.getElementById('quiz-image-box');
+      const imgElement = document.getElementById('quiz-image');
+      if (data.image && data.image.trim() !== "") {
+        imgElement.src = data.image;
+        imgBox.classList.remove('hidden');
+      } else {
+        imgBox.classList.add('hidden');
+      }
+
+      const optionsContainer = document.getElementById('quiz-options');
+      optionsContainer.innerHTML = "";
+      selectedValue = null;
+
+      if (data.type === "drag-and-drop") {
+        // Frase interactiva con espacio de inserción
+        const sentence = document.createElement('div');
+        sentence.className = "text-xl font-bold text-center text-gray-800 mb-6 p-4 bg-sky-50 rounded-xl border-2 border-dashed border-sky-200";
+        const cleanText = data.question.includes("______") ? data.question : data.question.replace(/\[box\]/g, "______");
+        sentence.innerHTML = cleanText.replace("______", `<span id="drop-target" class="inline-block min-w-[100px] border-b-2 border-sky-500 text-sky-600 mx-2">_______</span>`);
+        optionsContainer.appendChild(sentence);
+
+        // Bloques de palabras
+        const blocksWrap = document.createElement('div');
+        blocksWrap.className = "flex flex-wrap gap-3 justify-center mt-4";
+
+        (data.blocks || data.options || []).forEach(word => {
+          const block = document.createElement('div');
+          block.className = "px-6 py-2 bg-white border-2 border-gray-200 rounded-xl shadow-sm cursor-pointer font-bold text-gray-700 transition-all active:scale-95";
+          block.innerText = word;
+          block.onclick = () => {
+            blocksWrap.querySelectorAll('div').forEach(b => b.classList.remove('border-sky-500', 'bg-sky-50', 'text-sky-600'));
+            block.classList.add('border-sky-500', 'bg-sky-50', 'text-sky-600');
+            const target = document.getElementById('drop-target');
+            if (target) target.innerText = word;
+            selectedValue = word;
+            enableCheckBtn();
+          };
+          blocksWrap.appendChild(block);
+        });
+        optionsContainer.appendChild(blocksWrap);
+      } else {
+        // Opciones de selección múltiple
+        (data.options || []).forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = "quiz-option w-full p-4 text-left border-2 border-gray-100 rounded-2xl transition-all active:scale-95 flex items-center justify-between group mb-2 bg-white hover:border-sky-300";
+          btn.innerHTML = `<span class="font-medium text-gray-700">${opt}</span><div class="check-circle w-6 h-6 border-2 border-gray-200 rounded-full group-hover:border-sky-400"></div>`;
+          btn.onclick = () => {
+            document.querySelectorAll('.quiz-option').forEach(b => {
+              b.classList.remove('border-sky-400', 'bg-sky-50');
+              const c = b.querySelector('.check-circle');
+              if (c) c.innerHTML = '';
+            });
+            btn.classList.add('border-sky-400', 'bg-sky-50');
+            const circle = btn.querySelector('.check-circle');
+            if (circle) circle.innerHTML = `<div class="w-3 h-3 bg-sky-500 rounded-full m-auto"></div>`;
+            selectedValue = opt;
+            enableCheckBtn();
+          };
+          optionsContainer.appendChild(btn);
+        });
+      }
+
+      const checkBtn = document.getElementById('btnCheckAnswer');
+      checkBtn.innerText = "Comprobar Respuesta";
+      checkBtn.disabled = true;
+      checkBtn.className = "w-full bg-gray-300 text-white py-4 rounded-2xl font-bold text-lg shadow-lg cursor-not-allowed";
+    };
+
+    window.enableCheckBtn = () => {
+      const btn = document.getElementById('btnCheckAnswer');
+      btn.disabled = false;
+      btn.className = "w-full bg-[#2470BB] hover:bg-sky-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg cursor-pointer transition active:scale-98";
+    };
+
+    // Validar respuesta
+    document.getElementById('btnCheckAnswer').onclick = function() {
+      if (!selectedValue) return;
+      const data = quizData[currentQuestionIndex];
+
+      if (this.innerText.includes("Siguiente") || this.innerText.includes("Finalizar")) {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) {
+          loadQuestion(currentQuestionIndex);
+        } else {
+          finishQuiz();
+        }
+        return;
+      }
+
+      const isCorrect = selectedValue.trim().toLowerCase() === data.correct.trim().toLowerCase();
+      if (isCorrect) score++;
+
+      const isLast = currentQuestionIndex === quizData.length - 1;
+      this.innerText = isCorrect ? (isLast ? "¡Correcto! Finalizar" : "¡Correcto! Siguiente") : (isLast ? "Incorrecto. Finalizar" : "Incorrecto. Siguiente");
+      this.className = `w-full ${isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white py-4 rounded-2xl font-bold text-lg shadow-lg cursor-pointer`;
+
+      if (data.type === "drag-and-drop") {
+        const dropTarget = document.getElementById('drop-target');
+        if (dropTarget) {
+          dropTarget.style.color = isCorrect ? "#10b981" : "#ef4444";
+          dropTarget.style.borderColor = isCorrect ? "#10b981" : "#ef4444";
+        }
+      }
+    };
+
+    // Finalizar el Quiz y Actualizar el Semáforo de Desempeño
+    window.finishQuiz = () => {
+      const quizScreen = document.getElementById('quiz-screen');
+      const detailScreen = document.getElementById('view-detail');
+      const total = quizData.length;
+      const percentage = Math.round((score / total) * 100);
+
+      quizScreen.classList.replace('opacity-100', 'opacity-0');
+
+      setTimeout(() => {
+        quizScreen.classList.add('hidden');
+        detailScreen.classList.remove('hidden');
+        switchTab('actividades');
+
+        setTimeout(() => {
+          detailScreen.classList.replace('opacity-0', 'opacity-100');
+
+          const testCard = document.getElementById('start-unit1-test');
+          const dot = document.getElementById('status-dot');
+          if (testCard && dot) {
+            testCard.className = "flex items-center gap-4 p-5 shadow-md rounded-2xl border-b-4 cursor-pointer transition active:scale-95 duration-500";
+
+            if (percentage >= 80) {
+              testCard.classList.add('bg-green-50', 'border-green-500');
+              dot.className = "w-4 h-4 rounded-full bg-green-500";
+              dot.title = `Dominado (${score}/${total} - ${percentage}%)`;
+            } else if (percentage >= 50) {
+              testCard.classList.add('bg-yellow-50', 'border-yellow-500');
+              dot.className = "w-4 h-4 rounded-full bg-yellow-500";
+              dot.title = `Requiere práctica (${score}/${total} - ${percentage}%)`;
+            } else {
+              testCard.classList.add('bg-red-50', 'border-red-500');
+              dot.className = "w-4 h-4 rounded-full bg-red-500";
+              dot.title = `Refuerzo necesario (${score}/${total} - ${percentage}%)`;
+            }
+          }
+        }, 50);
+      }, 500);
+    };
+
+    // Salir del Quiz
+    document.getElementById('btnExitQuiz').onclick = () => {
+      if (confirm("¿Deseas salir del test? Tu progreso actual no se guardará.")) {
+        const quizScreen = document.getElementById('quiz-screen');
+        const detailScreen = document.getElementById('view-detail');
+        quizScreen.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => {
+          quizScreen.classList.add('hidden');
+          detailScreen.classList.remove('hidden');
+          setTimeout(() => detailScreen.classList.replace('opacity-0', 'opacity-100'), 50);
+          switchTab('actividades');
+        }, 500);
+      }
+    };
+
+    // 12. Listeners de Inicio
+    document.getElementById('btnEmpezar').onclick = renderGrades;
+
+    setTimeout(() => {
+      const s1 = document.getElementById('splash1');
+      const s2 = document.getElementById('splash2');
+      if (s1 && s2) {
+        s1.classList.add('opacity-0');
+        setTimeout(() => {
+          s1.classList.add('hidden');
+          s2.classList.remove('hidden');
+          setTimeout(() => s2.classList.add('opacity-100'), 50);
+        }, 1000);
+      }
+    }, 1500);
+  </script>
+</body>
+</html>

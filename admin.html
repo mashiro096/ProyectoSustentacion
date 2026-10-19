@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Docente - SingLing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50 h-screen overflow-hidden flex flex-col font-sans text-gray-800">
+
+  <!-- Header Docente -->
+  <header class="bg-white shadow-sm z-20 px-6 py-4 flex items-center justify-between border-b">
+    <div class="flex items-center gap-3">
+      <img src="img/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
+      <div>
+        <h1 class="text-xl font-bold text-[#2470BB]" style="font-family: 'Libre Caslon Text', serif;">SingLing</h1>
+        <p class="text-xs text-gray-400 uppercase tracking-widest">Panel del Docente</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="index.html" class="px-3.5 py-2 bg-sky-50 text-[#2470BB] hover:bg-[#2470BB] hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>Vista Estudiante</span>
+      </a>
+      <div class="h-6 w-px bg-gray-200"></div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-600 hidden sm:inline">Prof. <b>María</b></span>
+        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#2470BB] font-bold">
+          <i class="fa-solid fa-user"></i>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Barra Lateral -->
+    <aside class="w-64 bg-white border-r hidden md:flex flex-col p-4 justify-between">
+      <nav class="space-y-2">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 mb-2">Navegación</p>
+        <button onclick="goBackToDashboard()" class="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-[#2470BB] rounded-xl font-semibold text-sm transition text-left">
+          <i class="fa-solid fa-graduation-cap"></i> Grados Actuales
+        </button>
+      </nav>
+      <div class="p-4 bg-gray-50 rounded-2xl border text-xs text-gray-500">
+        <p class="font-bold text-gray-700 mb-1">Base de Datos</p>
+        <p>Sincronización en tiempo real con Firebase Firestore.</p>
+      </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 overflow-y-auto p-6 md:p-8 relative">
+      
+      <!-- 1. VISTA DASHBOARD (GRADOS) -->
+      <div id="view-dashboard" class="max-w-5xl mx-auto transition-all duration-300">
+        <div class="mb-8 text-center md:text-left">
+          <h2 class="text-2xl font-bold text-gray-800">Gestionar Grados</h2>
+          <p class="text-gray-500 text-sm">Selecciona un nivel para administrar sus contenidos, materias y retos.</p>
+        </div>
+        <div id="grades-container" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+      </div>
+
+      <!-- 2. VISTA MATERIAS -->
+      <div id="view-subjects" class="max-w-5xl mx-auto hidden opacity-0 transition-all duration-300">
+        <button onclick="goBackToDashboard()" class="text-gray-400 hover:text-[#2470BB] mb-6 flex items-center gap-2 text-sm font-semibold transition">
+          <i class="fa-solid fa-arrow-left"></i> Volver a Grados
+        </button>
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Materias Asignadas</h2>
+          <p class="text-gray-500 text-sm">Administra las asignaturas para este nivel escolar.</p>
+        </div>
+        <div id="subjects-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- 3. VISTA UNIDADES -->
+      <div id="view-units" class="max-w-5xl mx-auto hidden opacity-0 transition-all duration-300">
+        <button onclick="goBackToSubjects()" class="text-gray-400 hover:text-[#2470BB] mb-6 flex items-center gap-2 text-sm font-semibold transition">
+          <i class="fa-solid fa-arrow-left"></i> Volver a Materias
+        </button>
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Unidades de Aprendizaje</h2>
+          <p class="text-gray-500 text-sm">Organiza las unidades temáticas y sus contenidos.</p>
+        </div>
+        <div id="units-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- 4. VISTA CONTENIDO DE LA UNIDAD -->
+      <div id="view-content" class="max-w-5xl mx-auto hidden opacity-0 transition-all duration-300">
+        <button onclick="goBackToUnits()" class="text-gray-400 hover:text-[#2470BB] mb-4 flex items-center gap-2 text-sm font-semibold transition">
+          <i class="fa-solid fa-arrow-left"></i> Volver a Unidades
+        </button>
+
+        <div class="mb-6">
+          <h2 id="content-unit-title" class="text-3xl font-bold text-[#2470BB]">...</h2>
+          <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Gestión de Material Didáctico y Evaluaciones</p>
+        </div>
+
+        <!-- Pestañas Recursos y Actividades -->
+        <div class="flex gap-8 border-b mb-8">
+          <button onclick="switchTab('recursos')" id="tab-rec" class="pb-4 px-2 border-b-2 border-[#2470BB] text-[#2470BB] font-bold flex items-center gap-2 text-sm transition-all">
+            <i class="fa-solid fa-book-open"></i> Recursos
+          </button>
+          <button onclick="switchTab('actividades')" id="tab-act" class="pb-4 px-2 border-b-2 border-transparent text-gray-400 font-bold flex items-center gap-2 text-sm transition-all hover:text-gray-600">
+            <i class="fa-solid fa-puzzle-piece"></i> Actividades / Retos
+          </button>
+        </div>
+
+        <!-- Panel de Recursos -->
+        <div id="panel-recursos" class="space-y-6">
+          <div class="bg-white border rounded-2xl p-6 shadow-sm">
+            <h3 class="font-bold text-gray-700 mb-4 uppercase text-xs tracking-widest">Añadir Nuevo Material</h3>
+            <div class="grid grid-cols-1 gap-4">
+              <input type="text" id="res-title" placeholder="Título del material (Ej: Guía de Vocabulario - Países)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white transition outline-none text-sm">
+              <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="res-url" placeholder="Link de Google Drive o URL directa" class="flex-1 px-4 py-3 rounded-xl border bg-gray-50 focus:bg-white transition outline-none text-sm">
+                <select id="res-type" class="px-4 py-3 rounded-xl border bg-white font-semibold text-gray-600 text-sm outline-none">
+                  <option value="pdf">📄 PDF / Documento</option>
+                  <option value="video">🎥 Video Tutorial</option>
+                </select>
+              </div>
+              <button onclick="saveResource()" class="bg-[#2470BB] hover:bg-sky-600 text-white py-3 rounded-xl font-bold transition text-sm shadow">Guardar Material</button>
+            </div>
+          </div>
+          <div id="resources-list" class="grid grid-cols-1 gap-3"></div>
+        </div>
+
+        <!-- Panel de Actividades (Creador Descomentado y 100% Funcional) -->
+        <div id="panel-actividades" class="hidden space-y-6">
+          <div class="bg-white border border-orange-100 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center text-xl">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-800">Creador de Retos Educativos</h3>
+                <p class="text-xs text-gray-500">Diseña actividades interactivas para tus estudiantes.</p>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Modo de Actividad</label>
+                  <select id="q-type" onchange="toggleQuestionType()" class="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-200 outline-none font-medium text-sm">
+                    <option value="multiple">🔘 Selección Múltiple</option>
+                    <option value="fill">🧩 Completar con Cuadros (Drag & Drop)</option>
+                  </select>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Imagen de Referencia (Opcional - Link o Ruta)</label>
+                  <input type="text" id="q-image" placeholder="Pega el link de la imagen o ruta (Ej: img/6unidad/unit1/canada.jpg)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Enunciado o Frase</label>
+                <textarea id="q-text" placeholder="Ej: What’s the capital of Canada? / The [box] is red." class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm" rows="2"></textarea>
+                <p id="fill-hint" class="hidden text-[10px] text-orange-500 italic px-2 font-semibold">💡 Tip: Escribe <b>[box]</b> donde quieras que aparezca el cuadro vacío para completar.</p>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Opciones de Respuesta</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="options-container">
+                  <div class="relative">
+                    <input type="text" id="opt-1" placeholder="Opción CORRECTA *" class="w-full pl-10 pr-4 py-3 rounded-xl border border-green-200 bg-green-50 outline-none text-sm font-semibold">
+                    <i class="fa-solid fa-check absolute left-4 top-4 text-green-500"></i>
+                  </div>
+                  <input type="text" id="opt-2" placeholder="Opción incorrecta *" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                  <input type="text" id="opt-3" placeholder="Opción incorrecta (opcional)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                  <input type="text" id="opt-4" placeholder="Opción incorrecta (opcional)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                </div>
+              </div>
+
+              <button onclick="saveQuestion()" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-plus"></i> Añadir a la Unidad
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between px-2">
+            <h4 class="font-bold text-gray-700 text-sm">Desafíos Configurados</h4>
+            <div class="flex items-center gap-2">
+              <button onclick="seedOfficialQuestions()" class="text-xs font-semibold px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg transition border border-orange-200 flex items-center gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Precargar preguntas sugeridas</span>
+              </button>
+              <span id="badge-count" class="bg-gray-200 text-gray-600 text-[10px] px-2.5 py-1 rounded-full font-bold">0 Items</span>
+            </div>
+          </div>
+          <div id="questions-list" class="grid grid-cols-1 gap-4 pb-20"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal Crear Materia -->
+  <div id="modal-subject" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl">
+      <h3 class="text-xl font-bold mb-2">Nueva Materia</h3>
+      <p class="text-xs text-gray-400 mb-4">Ingresa el nombre de la materia a agregar:</p>
+      <input type="text" id="input-subject-name" placeholder="Ej: Inglés" class="w-full px-4 py-3 rounded-xl border mb-6 text-sm outline-none focus:border-[#2470BB]">
+      <div class="flex justify-end gap-3">
+        <button onclick="closeModal('modal-subject')" class="px-4 py-2 text-gray-400 hover:text-gray-600 font-semibold text-sm">Cancelar</button>
+        <button onclick="addNewSubject()" class="px-6 py-2.5 bg-[#2470BB] hover:bg-sky-600 text-white rounded-xl font-bold text-sm">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear Unidad -->
+  <div id="modal-unit" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl">
+      <h3 class="text-xl font-bold mb-2">Nueva Unidad</h3>
+      <p class="text-xs text-gray-400 mb-4">Ingresa el título temático de la unidad:</p>
+      <input type="text" id="input-unit-name" placeholder="Ej: Unit 1: Countries around the world" class="w-full px-4 py-3 rounded-xl border mb-6 text-sm outline-none focus:border-sky-500">
+      <div class="flex justify-end gap-3">
+        <button onclick="closeModal('modal-unit')" class="px-4 py-2 text-gray-400 hover:text-gray-600 font-semibold text-sm">Cancelar</button>
+        <button onclick="addNewUnit()" class="px-6 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-sm">Crear Unidad</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT FIREBASE Y LÓGICA DOCENTE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBMFxBxA6kfsbHylw3m0_QCl5fhJGAMJZ0",
+      authDomain: "paapre-8c81a.firebaseapp.com",
+      projectId: "paapre-8c81a",
+      storageBucket: "paapre-8c81a.firebasestorage.app",
+      messagingSenderId: "662329592959",
+      appId: "1:662329592959:web:c960ab79783d7f9346034a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const gradesData = [
+      { id: "1", name: "1ero de Básica" }, { id: "2", name: "2do de Básica" },
+      { id: "3", name: "3ero de Básica" }, { id: "4", name: "4to de Básica" },
+      { id: "5", name: "5to de Básica" }, { id: "6", name: "6to de Básica" },
+      { id: "7", name: "7mo de Básica" }
+    ];
+
+    let currentGradeId = null;
+    let currentSubjectId = null;
+    let currentUnitId = null;
+
+    window.onload = () => renderGrades();
+
+    function renderGrades() {
+      const container = document.getElementById('grades-container');
+      container.innerHTML = '';
+      gradesData.forEach(grade => {
+        container.innerHTML += `
+          <div onclick="window.openGrade('${grade.id}', '${grade.name}')" class="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-[#2470BB] hover:shadow-md hover:-translate-y-1 transition duration-200 cursor-pointer text-center">
+            <h3 class="text-xl font-bold text-gray-800 mb-1">${grade.name}</h3>
+            <p class="text-xs text-gray-400">Administrar contenidos y materias</p>
+          </div>`;
+      });
+    }
+
+    window.openGrade = (id, name) => { currentGradeId = id; switchView('view-subjects'); loadSubjects(id); };
+    window.openUnits = (id, name) => { currentSubjectId = id; switchView('view-units'); loadUnits(id); };
+    window.openContent = (id, title) => { 
+      currentUnitId = id; 
+      document.getElementById('content-unit-title').innerText = title; 
+      switchView('view-content'); 
+      loadResources(id); 
+      loadQuestions(id);
+    };
+
+    window.switchTab = (tab) => {
+      const pRec = document.getElementById('panel-recursos');
+      const pAct = document.getElementById('panel-actividades');
+      const tRec = document.getElementById('tab-rec');
+      const tAct = document.getElementById('tab-act');
+
+      if(tab === 'recursos'){
+        pRec.classList.remove('hidden'); pAct.classList.add('hidden');
+        tRec.className = "pb-4 px-2 border-b-2 border-[#2470BB] text-[#2470BB] font-bold flex items-center gap-2 text-sm";
+        tAct.className = "pb-4 px-2 border-b-2 border-transparent text-gray-400 font-bold flex items-center gap-2 text-sm";
+      } else {
+        pRec.classList.add('hidden'); pAct.classList.remove('hidden');
+        tAct.className = "pb-4 px-2 border-b-2 border-orange-500 text-orange-500 font-bold flex items-center gap-2 text-sm";
+        tRec.className = "pb-4 px-2 border-b-2 border-transparent text-gray-400 font-bold flex items-center gap-2 text-sm";
+      }
+    };
+
+    window.toggleQuestionType = () => {
+      const type = document.getElementById('q-type').value;
+      const hint = document.getElementById('fill-hint');
+      if (hint) hint.classList.toggle('hidden', type !== 'fill');
+    };
+
+    function cleanDriveLink(url) {
+      if (!url) return "";
+      if (url.includes("drive.google.com")) {
+        const parts = url.split('/');
+        const fileId = url.includes('id=') ? url.split('id=')[1] : parts[parts.indexOf('d') + 1];
+        if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId.split(/[?&]/)[0]}`;
+      }
+      return url;
+    }
+
+    function loadSubjects(gradeId) {
+      const q = query(collection(db, "materias"), where("gradoId", "==", gradeId));
+      onSnapshot(q, (snap) => {
+        const container = document.getElementById('subjects-grid');
+        container.innerHTML = '';
+        snap.forEach(d => {
+          container.innerHTML += `
+            <div onclick="window.openUnits('${d.id}', '${d.data().nombre}')" class="bg-white p-5 rounded-xl shadow border flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
+              <span class="font-bold text-gray-800">${d.data().nombre}</span>
+              <div class="flex items-center gap-2">
+                <button onclick="event.stopPropagation(); window.deleteItem('materias', '${d.id}')" class="text-gray-300 hover:text-red-500 transition p-2"><i class="fa-solid fa-trash-can"></i></button>
+                <i class="fa-solid fa-chevron-right text-gray-300"></i>
+              </div>
+            </div>`;
+        });
+        container.innerHTML += `<button onclick="openModal('modal-subject')" class="border-2 border-dashed border-blue-200 rounded-xl p-5 text-gray-500 hover:text-[#2470BB] hover:bg-blue-50/50 transition font-semibold"> + Añadir Materia </button>`;
+      });
+    }
+
+    function loadUnits(subId) {
+      const q = query(collection(db, "unidades"), where("materiaId", "==", subId));
+      onSnapshot(q, (snap) => {
+        const container = document.getElementById('units-grid');
+        container.innerHTML = '';
+        snap.forEach(d => {
+          container.innerHTML += `
+            <div onclick="window.openContent('${d.id}', '${d.data().titulo}')" class="bg-white p-5 rounded-xl shadow border-l-4 border-sky-500 flex items-center justify-between cursor-pointer hover:bg-sky-50 transition">
+              <span class="font-bold text-gray-800">${d.data().titulo}</span>
+              <div class="flex items-center gap-2">
+                <button onclick="event.stopPropagation(); window.deleteItem('unidades', '${d.id}')" class="text-gray-300 hover:text-red-500 transition p-2"><i class="fa-solid fa-trash-can"></i></button>
+                <i class="fa-solid fa-gear text-gray-300"></i>
+              </div>
+            </div>`;
+        });
+        container.innerHTML += `<button onclick="openModal('modal-unit')" class="border-2 border-dashed border-sky-200 rounded-xl p-5 text-sky-500 hover:bg-sky-50/50 transition font-semibold"> + Crear Nueva Unidad </button>`;
+      });
+    }
+
+    // --- LÓGICA DE ACTIVIDADES (RETO) ---
+    window.saveQuestion = async () => {
+      const type = document.getElementById('q-type').value;
+      const text = document.getElementById('q-text').value.trim();
+      const imageRaw = document.getElementById('q-image').value.trim();
+      const opts = [
+        document.getElementById('opt-1').value.trim(),
+        document.getElementById('opt-2').value.trim(),
+        document.getElementById('opt-3').value.trim(),
+        document.getElementById('opt-4').value.trim()
+      ];
+
+      if(!text || !opts[0] || !opts[1]) return alert("Por favor completa los campos principales (enunciado y al menos 2 opciones).");
+
+      const cleanSentence = text.replace(/\[box\]/g, "______");
+      await addDoc(collection(db, "preguntas"), {
+        unidadId: currentUnitId,
+        tipo: type,
+        pregunta: cleanSentence,
+        imagen: cleanDriveLink(imageRaw),
+        opciones: opts.filter(o => o !== ""),
+        correcta: opts[0],
+        createdAt: new Date().toISOString()
+      });
+
+      document.getElementById('q-text').value = '';
+      document.getElementById('q-image').value = '';
+      [1,2,3,4].forEach(i => document.getElementById(`opt-${i}`).value = '');
+      alert("¡Desafío añadido con éxito!");
+    };
+
+    window.seedOfficialQuestions = async () => {
+      if (!currentUnitId) return alert("Por favor selecciona una unidad primero.");
+      if (!confirm("¿Deseas guardar automáticamente las 9 preguntas sugeridas de práctica (capitales, banderas y comparativos) en esta unidad?")) return;
+
+      const sampleBank = [
+        { pregunta: "What’s the Capital of Canada?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Ottawa", "Toronto", "Vancouver"], correcta: "Ottawa" },
+        { pregunta: "What’s the capital of Brazil?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Brasilia", "Rio de Janeiro", "Sao Paulo"], correcta: "Brasilia" },
+        { pregunta: "What’s the capital of Ecuador?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Quito", "Guayaquil", "Cuenca"], correcta: "Quito" },
+        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/canada.jpg", tipo: "multiple", opciones: ["Canada", "USA", "Spain"], correcta: "Canada" },
+        { pregunta: "Where is Chile?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["South America", "North America", "Europe"], correcta: "South America" },
+        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/brasil.jpg", tipo: "multiple", opciones: ["Brazil", "Argentina", "Chile"], correcta: "Brazil" },
+        { pregunta: "Argentina is ______ than Brazil.", imagen: "img/6unidad/unit1/comparar1.jpg", tipo: "fill", opciones: ["smaller", "bigger", "longer", "tallest"], correcta: "smaller" },
+        { pregunta: "Canada is the ______ country of all.", imagen: "img/6unidad/unit1/comparar2.jpg", tipo: "fill", opciones: ["biggest", "smallest", "longer", "big"], correcta: "biggest" },
+        { pregunta: "Chile is ______.", imagen: "img/6unidad/unit1/comparar6.jpg", tipo: "fill", opciones: ["long.", "bigger", "fastest", "small"], correcta: "long." }
+      ];
+
+      for (const q of sampleBank) {
+        await addDoc(collection(db, "preguntas"), {
+          unidadId: currentUnitId,
+          tipo: q.tipo,
+          pregunta: q.pregunta,
+          imagen: q.imagen,
+          opciones: q.opciones,
+          correcta: q.correcta,
+          createdAt: new Date().toISOString()
+        });
+      }
+      alert("¡9 preguntas cargadas automáticamente en Firestore para esta unidad!");
+    };
+
+    function loadQuestions(unitId) {
+      const q = query(collection(db, "preguntas"), where("unidadId", "==", unitId));
+      onSnapshot(q, (snapshot) => {
+        const list = document.getElementById('questions-list');
+        const badge = document.getElementById('badge-count');
+        list.innerHTML = '';
+        let count = 0;
+
+        if (snapshot.empty) {
+          list.innerHTML = `
+            <div class="text-center p-8 bg-white rounded-2xl border text-gray-400">
+              <p class="font-medium text-sm">No hay desafíos aún en esta unidad.</p>
+              <p class="text-xs text-gray-300 mt-1">Usa el formulario para añadir preguntas interactivas.</p>
+            </div>`;
+          badge.innerText = "0 Items";
+          return;
+        }
+
+        snapshot.forEach(d => {
+          count++;
+          const qData = d.data();
+          const isFill = qData.tipo === 'fill';
+          list.innerHTML += `
+          <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex gap-6 items-center">
+            <div class="relative shrink-0">
+               ${qData.imagen ? `<img src="${qData.imagen}" class="w-20 h-20 object-contain rounded-xl border" onerror="this.src='img/grado6.jpg'">` : `<div class="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-xl text-gray-300"><i class="fa-solid fa-image text-2xl"></i></div>`}
+               <div class="absolute -top-2 -right-2 bg-orange-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-[10px] shadow-lg">
+                  <i class="fa-solid ${isFill ? 'fa-puzzle-piece' : 'fa-list-check'}"></i>
+               </div>
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start">
+                <h5 class="font-bold text-gray-800 leading-tight">${qData.pregunta}</h5>
+                <button onclick="window.deleteItem('preguntas', '${d.id}')" class="text-gray-300 hover:text-red-500 transition ml-4"><i class="fa-solid fa-trash-can"></i></button>
+              </div>
+              <div class="flex flex-wrap gap-2 mt-3">
+                ${(qData.opciones || []).map(o => `
+                  <span class="text-[10px] px-3 py-1.5 rounded-lg font-bold border ${o === qData.correcta ? 'bg-green-50 border-green-200 text-green-600' : 'bg-gray-50 border-gray-200 text-gray-400'}">
+                    ${o === qData.correcta ? '✓ ' : ''}${o}
+                  </span>`).join('')}
+              </div>
+            </div>
+          </div>`;
+        });
+        badge.innerText = `${count} Desafíos`;
+      });
+    }
+
+    // --- RECURSOS ---
+    window.saveResource = async () => {
+      const title = document.getElementById('res-title').value.trim();
+      const rawUrl = document.getElementById('res-url').value.trim();
+      const type = document.getElementById('res-type').value;
+      if (!title || !rawUrl) return alert("Completa el título y el link.");
+      await addDoc(collection(db, "recursos"), { titulo: title, url: cleanDriveLink(rawUrl), tipo: type, unidadId: currentUnitId, createdAt: new Date().toISOString() });
+      document.getElementById('res-title').value = ''; 
+      document.getElementById('res-url').value = '';
+      alert("Material guardado exitosamente");
+    };
+
+    function loadResources(unitId) {
+      const q = query(collection(db, "recursos"), where("unidadId", "==", unitId));
+      onSnapshot(q, (snapshot) => {
+        const list = document.getElementById('resources-list');
+        list.innerHTML = '';
+        
+        if (snapshot.empty) {
+          list.innerHTML = `<div class="p-6 bg-white rounded-xl border text-center text-gray-400 text-sm">No hay recursos subidos aún para esta unidad.</div>`;
+          return;
+        }
+
+        snapshot.forEach(d => {
+          const res = d.data();
+          list.innerHTML += `
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-[#2470BB] transition">
+            <div class="flex items-center gap-4">
+               <div class="w-10 h-10 ${res.tipo === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'} flex items-center justify-center rounded-xl transition">
+                  <i class="fa-solid ${res.tipo === 'pdf' ? 'fa-file-lines' : 'fa-circle-play'}"></i>
+               </div>
+               <span class="font-bold text-gray-700">${res.titulo}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <a href="${res.url}" target="_blank" class="text-[#2470BB] text-xs font-bold px-3 py-1.5 bg-blue-50 hover:bg-[#2470BB] hover:text-white rounded-lg transition">ABRIR ↗</a>
+              <button class="text-gray-300 hover:text-red-500 transition p-1.5" onclick="window.deleteItem('recursos', '${d.id}')"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>`;
+        });
+      });
+    }
+
+    // UTILIDADES CRUD
+    window.deleteItem = async (col, id) => { 
+      if(confirm("¿Estás seguro de eliminar este elemento?")) await deleteDoc(doc(db, col, id)); 
+    };
+    window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+    window.goBackToDashboard = () => switchView('view-dashboard');
+    window.goBackToSubjects = () => switchView('view-subjects');
+    window.goBackToUnits = () => switchView('view-units');
+
+    function switchView(viewId) {
+      ['view-dashboard', 'view-subjects', 'view-units', 'view-content'].forEach(v => {
+        document.getElementById(v).classList.add('hidden', 'opacity-0');
+      });
+      const target = document.getElementById(viewId);
+      target.classList.remove('hidden');
+      setTimeout(() => target.classList.remove('opacity-0'), 50);
+    }
+
+    window.addNewSubject = async () => {
+      const name = document.getElementById('input-subject-name').value.trim();
+      if (!name) return;
+      await addDoc(collection(db, "materias"), { nombre: name, gradoId: currentGradeId, createdAt: new Date().toISOString() });
+      closeModal('modal-subject');
+      document.getElementById('input-subject-name').value = '';
+    };
+
+    window.addNewUnit = async () => {
+      const name = document.getElementById('input-unit-name').value.trim();
+      if (!name) return;
+      await addDoc(collection(db, "unidades"), { titulo: name, materiaId: currentSubjectId, createdAt: new Date().toISOString() });
+      closeModal('modal-unit');
+      document.getElementById('input-unit-name').value = '';
+    };
+  </script>
+</body>
+</html>
