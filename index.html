@@ -170,23 +170,12 @@
     </div>
   </div>
 
-  <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A FIRESTORE ==================== -->
+  <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A MARIADB / MYSQL ==================== -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { api, initDbStatusBadge } from "./js/api.js";
 
-    // 1. Configuración de Firebase Firestore
-    const firebaseConfig = {
-      apiKey: "AIzaSyBMFxBxA6kfsbHylw3m0_QCl5fhJGAMJZ0",
-      authDomain: "paapre-8c81a.firebaseapp.com",
-      projectId: "paapre-8c81a",
-      storageBucket: "paapre-8c81a.firebasestorage.app",
-      messagingSenderId: "662329592959",
-      appId: "1:662329592959:web:c960ab79783d7f9346034a"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // 1. Inicializar indicador visual de conexión a MariaDB
+    initDbStatusBadge();
 
     // 2. Grados de Educación General Básica
     const gradesData = [
@@ -207,8 +196,9 @@
     let currentUnitId = null;
     let currentUnitTitle = "";
 
-    // 4. Variables del Motor de Quiz (Inicialmente VACÍO - Se llena automáticamente de Firestore)
+    // 4. Variables del Motor de Quiz (Se llena automáticamente de MariaDB)
     let unitQuestions = [];
+    let currentUnitQuestionLimit = 10;
     let quizData = [];
     let currentQuestionIndex = 0;
     let selectedValue = null;
@@ -249,7 +239,7 @@
       navigate('splash2', 'view-grades');
     };
 
-    // 7. Cargar Materias dinámicas desde Firestore
+    // 7. Cargar Materias dinámicas desde MariaDB
     window.loadSubjects = async (gradeId, gradeFullName) => {
       currentGradeId = gradeId;
       currentGradeName = gradeFullName;
@@ -257,14 +247,13 @@
       navigate('view-grades', 'view-subjects');
 
       const container = document.getElementById('lista-materias');
-      container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias...</div>';
+      container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias desde MariaDB...</div>';
 
       try {
-        const q = query(collection(db, "materias"), where("gradoId", "==", gradeId));
-        const snap = await getDocs(q);
+        const materias = await api.getMaterias(gradeId);
         container.innerHTML = '';
 
-        if (snap.empty) {
+        if (!materias || materias.length === 0) {
           container.innerHTML = `
             <div class="col-span-full p-8 text-center bg-white rounded-2xl shadow-sm border border-gray-100">
               <p class="text-gray-600 font-semibold text-sm">No hay materias registradas para este grado</p>
@@ -273,22 +262,21 @@
           return;
         }
 
-        snap.forEach(doc => {
-          const data = doc.data();
+        materias.forEach(doc => {
           container.innerHTML += `
-            <div onclick="loadUnits('${doc.id}', '${data.nombre}')" class="bg-white p-5 rounded-2xl shadow border-b-4 border-sky-400 text-center hover:bg-sky-50 transition cursor-pointer active:scale-95">
+            <div onclick="loadUnits('${doc.id}', '${doc.nombre}')" class="bg-white p-5 rounded-2xl shadow border-b-4 border-sky-400 text-center hover:bg-sky-50 transition cursor-pointer active:scale-95">
               <div class="text-3xl mb-2">📚</div>
-              <span class="font-bold text-base text-gray-800 block">${data.nombre}</span>
+              <span class="font-bold text-base text-gray-800 block">${doc.nombre}</span>
               <span class="text-xs text-sky-500 font-semibold mt-1 inline-block">Ver unidades</span>
             </div>`;
         });
       } catch (err) {
         console.error("Error al cargar materias:", err);
-        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al conectar con Firestore.</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al conectar con MariaDB. Asegúrate de iniciar el servidor con npm start.</div>';
       }
     };
 
-    // 8. Cargar Unidades dinámicas desde Firestore
+    // 8. Cargar Unidades dinámicas desde MariaDB
     window.loadUnits = async (subjectId, subjectName) => {
       currentSubjectId = subjectId;
       currentSubjectName = subjectName;
@@ -296,14 +284,13 @@
       navigate('view-subjects', 'view-units');
 
       const container = document.getElementById('lista-unidades');
-      container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades...</div>';
+      container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades desde MariaDB...</div>';
 
       try {
-        const q = query(collection(db, "unidades"), where("materiaId", "==", subjectId));
-        const snap = await getDocs(q);
+        const unidades = await api.getUnidades(subjectId);
         container.innerHTML = '';
 
-        if (snap.empty) {
+        if (!unidades || unidades.length === 0) {
           container.innerHTML = `
             <div class="p-8 text-center bg-white rounded-2xl shadow-sm border border-gray-100">
               <p class="text-gray-600 font-semibold text-sm">No hay unidades registradas aún</p>
@@ -313,17 +300,16 @@
         }
 
         let idx = 1;
-        snap.forEach(doc => {
-          const data = doc.data();
+        unidades.forEach(doc => {
           const unitImg = idx === 1 ? 'img/6unidad/mapa1.jpg' : (idx === 2 ? 'img/6unidad/familia.jpg' : 'img/6unidad/feriados.jpg');
           container.innerHTML += `
-            <div onclick="openUnit('${doc.id}', '${data.titulo}')" class="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transition active:scale-95 duration-300 hover:shadow-xl">
+            <div onclick="openUnit('${doc.id}', '${doc.titulo}')" class="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transition active:scale-95 duration-300 hover:shadow-xl">
               <div class="h-44 bg-blue-100 flex items-center justify-center">
                 <img src="${unitImg}" class="h-32 object-contain" onerror="this.src='img/grado6.jpg'" />
               </div>
               <div class="p-5 flex justify-between items-center">
                 <div>
-                  <h3 class="text-xl font-bold text-gray-800">${data.titulo}</h3>
+                  <h3 class="text-xl font-bold text-gray-800">${doc.titulo}</h3>
                   <p class="text-gray-500 text-xs mt-0.5">Recursos y evaluación interactiva</p>
                 </div>
                 <span class="text-sky-400 font-bold text-xl">→</span>
@@ -333,6 +319,7 @@
         });
       } catch (err) {
         console.error("Error al cargar unidades:", err);
+        container.innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con MariaDB.</div>';
       }
     };
 
@@ -359,16 +346,15 @@
           <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
           <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
           <div id="recursos-container" class="space-y-3">
-            <div class="text-center py-6 text-gray-400">Cargando recursos...</div>
+            <div class="text-center py-6 text-gray-400">Cargando recursos desde MariaDB...</div>
           </div>`;
 
         try {
-          const q = query(collection(db, "recursos"), where("unidadId", "==", currentUnitId));
-          const snap = await getDocs(q);
+          const recursos = await api.getRecursos(currentUnitId);
           const recContainer = document.getElementById('recursos-container');
           recContainer.innerHTML = '';
 
-          if (snap.empty) {
+          if (!recursos || recursos.length === 0) {
             recContainer.innerHTML = `
               <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
                 <span class="text-3xl mb-2 block">📖</span>
@@ -378,16 +364,15 @@
             return;
           }
 
-          snap.forEach(doc => {
-            const data = doc.data();
-            const isPdf = data.tipo === 'pdf';
+          recursos.forEach(doc => {
+            const isPdf = doc.tipo === 'pdf';
             recContainer.innerHTML += `
-              <a href="${data.url}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-white rounded-2xl shadow-sm hover:shadow border-l-4 ${isPdf ? 'border-red-400' : 'border-sky-400'} transition group">
+              <a href="${doc.url}" target="_blank" rel="noopener noreferrer" class="block p-4 bg-white rounded-2xl shadow-sm hover:shadow border-l-4 ${isPdf ? 'border-red-400' : 'border-sky-400'} transition group">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
                     <span class="text-2xl">${isPdf ? '📄' : '🎥'}</span>
                     <div>
-                      <p class="font-bold text-gray-800 text-sm group-hover:text-[#2470BB] transition">${data.titulo}</p>
+                      <p class="font-bold text-gray-800 text-sm group-hover:text-[#2470BB] transition">${doc.titulo}</p>
                       <p class="text-[11px] text-gray-400">${isPdf ? 'Documento PDF' : 'Video Tutorial'}</p>
                     </div>
                   </div>
@@ -397,9 +382,10 @@
           });
         } catch (err) {
           console.error("Error al cargar recursos:", err);
+          document.getElementById('recursos-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al cargar recursos desde MariaDB.</div>';
         }
       } else {
-        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE FIRESTORE
+        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE MARIADB
         btnAct.className = "flex flex-col items-center text-[#2470BB] transition";
         btnRec.className = "flex flex-col items-center text-gray-400 transition";
 
@@ -407,17 +393,19 @@
           <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Actividades</h1>
           <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
           <div id="actividades-container" class="space-y-4 max-w-lg mx-auto">
-            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en Firestore...</div>
+            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en MariaDB...</div>
           </div>`;
 
         try {
-          const q = query(collection(db, "preguntas"), where("unidadId", "==", currentUnitId));
-          const snap = await getDocs(q);
+          const preguntas = await api.getPreguntas(currentUnitId);
+          const config = await api.getQuizConfig(currentUnitId).catch(() => ({ limitePreguntas: 10 }));
+          currentUnitQuestionLimit = config?.limitePreguntas || 10;
+
           const actContainer = document.getElementById('actividades-container');
           actContainer.innerHTML = '';
 
-          // 1. Si no hay preguntas en Firestore para esta unidad:
-          if (snap.empty) {
+          // 1. Si no hay preguntas en MariaDB para esta unidad:
+          if (!preguntas || preguntas.length === 0) {
             unitQuestions = [];
             actContainer.innerHTML = `
               <div class="p-8 bg-white rounded-2xl shadow-sm border border-dashed border-gray-200 text-center">
@@ -430,42 +418,63 @@
             return;
           }
 
-          // 2. Si hay preguntas en Firestore, se cargan de forma automática:
-          unitQuestions = [];
-          snap.forEach(doc => {
-            const data = doc.data();
-            unitQuestions.push({
-              id: doc.id,
-              question: data.pregunta,
-              image: data.imagen || "",
-              options: data.opciones || [],
-              blocks: data.opciones || [],
-              correct: data.correcta,
-              type: data.tipo === "fill" ? "drag-and-drop" : "multiple"
-            });
-          });
+          // 2. Si hay preguntas en MariaDB, se cargan de forma automática:
+          unitQuestions = preguntas.map(doc => ({
+            id: String(doc.id),
+            question: doc.pregunta || doc.question,
+            image: doc.imagen || doc.image || "",
+            options: doc.opciones || doc.options || [],
+            blocks: doc.opciones || doc.options || [],
+            correct: doc.correcta || doc.correct,
+            type: (doc.tipo === "fill" || doc.type === "drag-and-drop") ? "drag-and-drop" : "multiple"
+          }));
 
-          const total = unitQuestions.length;
+          const totalInDb = unitQuestions.length;
+          const displayLimit = (currentUnitQuestionLimit === 'all' || !currentUnitQuestionLimit) 
+            ? totalInDb 
+            : Math.min(parseInt(currentUnitQuestionLimit, 10) || 10, totalInDb);
+
           actContainer.innerHTML = `
             <div id="start-unit1-test" onclick="window.startQuiz()" class="flex items-center gap-4 p-5 bg-white shadow-md rounded-2xl border-b-4 border-sky-400 cursor-pointer transition hover:bg-gray-50 active:scale-95 duration-300">
-              <span class="text-3xl">📋</span>
+              <div class="w-14 h-14 bg-sky-50 text-[#2470BB] rounded-2xl flex items-center justify-center text-2xl shadow-xs">
+                <i class="fa-solid fa-shuffle"></i>
+              </div>
               <div class="flex-1">
                 <h3 class="font-bold text-gray-800 text-lg">${currentUnitTitle} - Test Interactivo</h3>
-                <p class="text-xs text-gray-500">${total} ${total === 1 ? 'pregunta sincronizada desde Firestore' : 'preguntas sincronizadas desde Firestore'}</p>
+                <p class="text-xs text-sky-600 font-bold mt-0.5">
+                  🎲 ${displayLimit} preguntas seleccionadas al azar
+                  <span class="text-gray-400 font-normal">(de ${totalInDb} disponibles en MariaDB)</span>
+                </p>
               </div>
-              <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
+              <div class="flex items-center gap-2">
+                <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
+                <span class="text-sky-500 font-bold text-xl">→</span>
+              </div>
             </div>
 
             <div class="p-4 bg-sky-50/70 border border-sky-100 rounded-2xl text-xs text-sky-800 leading-relaxed">
-              <p class="font-bold mb-1">💡 Test Automático</p>
-              Las preguntas han sido cargadas automáticamente desde la base de datos de esta unidad. Haz clic en la tarjeta superior para iniciar el test interactivo.
+              <p class="font-bold mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-dice text-[#2470BB]"></i>
+                <span>Selección Aleatoria Automática</span>
+              </p>
+              El banco contiene <b>${totalInDb} preguntas</b> en MariaDB. Para esta evaluación se presentarán <b>${displayLimit} preguntas</b> escogidas al azar en cada intento, garantizando variedad pedagógica.
             </div>`;
         } catch (err) {
           console.error("Error al cargar actividades:", err);
-          document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos.</div>';
+          document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos MariaDB.</div>';
         }
       }
     };
+
+    // Helper: Algoritmo de barajado aleatorio Fisher-Yates
+    function shuffleArray(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
 
     // ==================== 11. MOTOR DE EVALUACIÓN AUTOMÁTICO ====================
     window.startQuiz = () => {
@@ -474,8 +483,21 @@
         return;
       }
 
-      // Barajar automáticamente las preguntas obtenidas de Firestore
-      quizData = [...unitQuestions].sort(() => 0.5 - Math.random());
+      // 1. Determinar el límite configurado (ej: 10 de 24)
+      const limit = (currentUnitQuestionLimit === 'all' || !currentUnitQuestionLimit)
+        ? unitQuestions.length
+        : Math.min(parseInt(currentUnitQuestionLimit, 10) || 10, unitQuestions.length);
+
+      // 2. Barajar aleatoriamente todo el banco de MariaDB y extraer la cantidad configurada
+      const randomQuestions = shuffleArray(unitQuestions).slice(0, limit);
+
+      // 3. Barajar también las opciones/distractores de cada pregunta individual
+      quizData = randomQuestions.map(q => ({
+        ...q,
+        options: shuffleArray(q.options || []),
+        blocks: shuffleArray(q.blocks || q.options || [])
+      }));
+
       currentQuestionIndex = 0;
       score = 0;
       loadQuestion(currentQuestionIndex);
@@ -609,6 +631,15 @@
       const detailScreen = document.getElementById('view-detail');
       const total = quizData.length;
       const percentage = Math.round((score / total) * 100);
+
+      // Guardar registro del intento en MariaDB
+      api.saveIntento({
+        unidadId: currentUnitId,
+        puntajeObtenido: score,
+        totalPreguntas: total,
+        porcentaje: percentage,
+        desempeno: percentage >= 80 ? 'verde' : (percentage >= 50 ? 'amarillo' : 'rojo')
+      }).catch(err => console.warn("No se pudo registrar intento en MariaDB:", err));
 
       quizScreen.classList.replace('opacity-100', 'opacity-0');
 

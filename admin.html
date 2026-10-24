@@ -45,8 +45,11 @@
         </button>
       </nav>
       <div class="p-4 bg-gray-50 rounded-2xl border text-xs text-gray-500">
-        <p class="font-bold text-gray-700 mb-1">Base de Datos</p>
-        <p>Sincronización en tiempo real con Firebase Firestore.</p>
+        <p class="font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Base de Datos</span>
+        </p>
+        <p>Conectado a MariaDB / MySQL relacional (InnoDB, UTF8mb4).</p>
       </div>
     </aside>
 
@@ -179,6 +182,37 @@
             </div>
           </div>
 
+          <!-- Configuración del Motor de Evaluación (Número de preguntas aleatorias) -->
+          <div class="bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-[#2470BB] text-white flex items-center justify-center text-xl shadow-sm shrink-0">
+                <i class="fa-solid fa-shuffle"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                  <span>Preguntas Presentadas al Estudiante</span>
+                  <span id="config-status-tag" class="text-[10px] bg-blue-100 text-[#2470BB] px-2 py-0.5 rounded-full font-bold">10 aleatorias</span>
+                </h4>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  Si hay más preguntas en el banco (ej. 24), el sistema seleccionará aleatoriamente esta cantidad para cada intento del alumno.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto shrink-0">
+              <label class="text-xs font-bold text-gray-600 whitespace-nowrap hidden sm:inline">Mostrar:</label>
+              <select id="config-quiz-limit" onchange="window.saveQuizLimit()" class="px-3.5 py-2.5 bg-white border border-blue-300 rounded-xl text-sm font-bold text-[#2470BB] shadow-sm outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer">
+                <option value="5">5 preguntas</option>
+                <option value="10" selected>10 preguntas (Estándar)</option>
+                <option value="15">15 preguntas</option>
+                <option value="20">20 preguntas</option>
+                <option value="all">Todas las preguntas</option>
+              </select>
+              <span id="saved-limit-msg" class="hidden text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-lg">
+                ✓ Guardado
+              </span>
+            </div>
+          </div>
+
           <div class="flex items-center justify-between px-2">
             <h4 class="font-bold text-gray-700 text-sm">Desafíos Configurados</h4>
             <div class="flex items-center gap-2">
@@ -221,22 +255,12 @@
     </div>
   </div>
 
-  <!-- SCRIPT FIREBASE Y LÓGICA DOCENTE -->
+  <!-- SCRIPT API REST Y LÓGICA DOCENTE CON MARIADB / MYSQL -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { api, cleanDriveLink, initDbStatusBadge } from "./js/api.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBMFxBxA6kfsbHylw3m0_QCl5fhJGAMJZ0",
-      authDomain: "paapre-8c81a.firebaseapp.com",
-      projectId: "paapre-8c81a",
-      storageBucket: "paapre-8c81a.firebasestorage.app",
-      messagingSenderId: "662329592959",
-      appId: "1:662329592959:web:c960ab79783d7f9346034a"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Inicializar badge visual de MariaDB
+    initDbStatusBadge();
 
     const gradesData = [
       { id: "1", name: "1ero de Básica" }, { id: "2", name: "2do de Básica" },
@@ -271,6 +295,39 @@
       switchView('view-content'); 
       loadResources(id); 
       loadQuestions(id);
+      loadQuizLimitConfig(id);
+    };
+
+    async function loadQuizLimitConfig(unitId) {
+      try {
+        const config = await api.getQuizConfig(unitId);
+        const select = document.getElementById('config-quiz-limit');
+        const tag = document.getElementById('config-status-tag');
+        const val = String(config.limitePreguntas || '10');
+        if (select) select.value = val;
+        if (tag) tag.innerText = val === 'all' ? 'Todas las preguntas' : `${val} aleatorias`;
+      } catch (err) {
+        console.warn("No se pudo cargar configuración de límite:", err);
+      }
+    }
+
+    window.saveQuizLimit = async () => {
+      if (!currentUnitId) return;
+      const select = document.getElementById('config-quiz-limit');
+      const tag = document.getElementById('config-status-tag');
+      const msg = document.getElementById('saved-limit-msg');
+      const val = select.value;
+
+      try {
+        await api.setQuizConfig(currentUnitId, val);
+        if (tag) tag.innerText = val === 'all' ? 'Todas las preguntas' : `${val} aleatorias`;
+        if (msg) {
+          msg.classList.remove('hidden');
+          setTimeout(() => msg.classList.add('hidden'), 2500);
+        }
+      } catch (err) {
+        alert("Error al guardar configuración: " + err.message);
+      }
     };
 
     window.switchTab = (tab) => {
@@ -296,25 +353,17 @@
       if (hint) hint.classList.toggle('hidden', type !== 'fill');
     };
 
-    function cleanDriveLink(url) {
-      if (!url) return "";
-      if (url.includes("drive.google.com")) {
-        const parts = url.split('/');
-        const fileId = url.includes('id=') ? url.split('id=')[1] : parts[parts.indexOf('d') + 1];
-        if (fileId) return `https://drive.google.com/uc?export=view&id=${fileId.split(/[?&]/)[0]}`;
-      }
-      return url;
-    }
+    async function loadSubjects(gradeId) {
+      const container = document.getElementById('subjects-grid');
+      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando materias desde MariaDB...</div>';
 
-    function loadSubjects(gradeId) {
-      const q = query(collection(db, "materias"), where("gradoId", "==", gradeId));
-      onSnapshot(q, (snap) => {
-        const container = document.getElementById('subjects-grid');
+      try {
+        const list = await api.getMaterias(gradeId);
         container.innerHTML = '';
-        snap.forEach(d => {
+        (list || []).forEach(d => {
           container.innerHTML += `
-            <div onclick="window.openUnits('${d.id}', '${d.data().nombre}')" class="bg-white p-5 rounded-xl shadow border flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
-              <span class="font-bold text-gray-800">${d.data().nombre}</span>
+            <div onclick="window.openUnits('${d.id}', '${d.nombre}')" class="bg-white p-5 rounded-xl shadow border flex items-center justify-between cursor-pointer hover:bg-blue-50 transition">
+              <span class="font-bold text-gray-800">${d.nombre}</span>
               <div class="flex items-center gap-2">
                 <button onclick="event.stopPropagation(); window.deleteItem('materias', '${d.id}')" class="text-gray-300 hover:text-red-500 transition p-2"><i class="fa-solid fa-trash-can"></i></button>
                 <i class="fa-solid fa-chevron-right text-gray-300"></i>
@@ -322,18 +371,23 @@
             </div>`;
         });
         container.innerHTML += `<button onclick="openModal('modal-subject')" class="border-2 border-dashed border-blue-200 rounded-xl p-5 text-gray-500 hover:text-[#2470BB] hover:bg-blue-50/50 transition font-semibold"> + Añadir Materia </button>`;
-      });
+      } catch (err) {
+        console.error("Error al cargar materias:", err);
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar materias desde MariaDB.</div>';
+      }
     }
 
-    function loadUnits(subId) {
-      const q = query(collection(db, "unidades"), where("materiaId", "==", subId));
-      onSnapshot(q, (snap) => {
-        const container = document.getElementById('units-grid');
+    async function loadUnits(subId) {
+      const container = document.getElementById('units-grid');
+      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando unidades desde MariaDB...</div>';
+
+      try {
+        const list = await api.getUnidades(subId);
         container.innerHTML = '';
-        snap.forEach(d => {
+        (list || []).forEach(d => {
           container.innerHTML += `
-            <div onclick="window.openContent('${d.id}', '${d.data().titulo}')" class="bg-white p-5 rounded-xl shadow border-l-4 border-sky-500 flex items-center justify-between cursor-pointer hover:bg-sky-50 transition">
-              <span class="font-bold text-gray-800">${d.data().titulo}</span>
+            <div onclick="window.openContent('${d.id}', '${d.titulo}')" class="bg-white p-5 rounded-xl shadow border-l-4 border-sky-500 flex items-center justify-between cursor-pointer hover:bg-sky-50 transition">
+              <span class="font-bold text-gray-800">${d.titulo}</span>
               <div class="flex items-center gap-2">
                 <button onclick="event.stopPropagation(); window.deleteItem('unidades', '${d.id}')" class="text-gray-300 hover:text-red-500 transition p-2"><i class="fa-solid fa-trash-can"></i></button>
                 <i class="fa-solid fa-gear text-gray-300"></i>
@@ -341,7 +395,10 @@
             </div>`;
         });
         container.innerHTML += `<button onclick="openModal('modal-unit')" class="border-2 border-dashed border-sky-200 rounded-xl p-5 text-sky-500 hover:bg-sky-50/50 transition font-semibold"> + Crear Nueva Unidad </button>`;
-      });
+      } catch (err) {
+        console.error("Error al cargar unidades:", err);
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar unidades desde MariaDB.</div>';
+      }
     }
 
     // --- LÓGICA DE ACTIVIDADES (RETO) ---
@@ -359,74 +416,85 @@
       if(!text || !opts[0] || !opts[1]) return alert("Por favor completa los campos principales (enunciado y al menos 2 opciones).");
 
       const cleanSentence = text.replace(/\[box\]/g, "______");
-      await addDoc(collection(db, "preguntas"), {
-        unidadId: currentUnitId,
-        tipo: type,
-        pregunta: cleanSentence,
-        imagen: cleanDriveLink(imageRaw),
-        opciones: opts.filter(o => o !== ""),
-        correcta: opts[0],
-        createdAt: new Date().toISOString()
-      });
+      
+      try {
+        await api.createPregunta({
+          unidadId: currentUnitId,
+          tipo: type,
+          pregunta: cleanSentence,
+          imagen: cleanDriveLink(imageRaw),
+          opciones: opts.filter(o => o !== ""),
+          correcta: opts[0]
+        });
 
-      document.getElementById('q-text').value = '';
-      document.getElementById('q-image').value = '';
-      [1,2,3,4].forEach(i => document.getElementById(`opt-${i}`).value = '');
-      alert("¡Desafío añadido con éxito!");
+        document.getElementById('q-text').value = '';
+        document.getElementById('q-image').value = '';
+        [1,2,3,4].forEach(i => document.getElementById(`opt-${i}`).value = '');
+        alert("¡Desafío añadido con éxito a MariaDB!");
+        loadQuestions(currentUnitId);
+      } catch (err) {
+        alert("Error al guardar desafío en MariaDB: " + err.message);
+      }
     };
 
     window.seedOfficialQuestions = async () => {
       if (!currentUnitId) return alert("Por favor selecciona una unidad primero.");
-      if (!confirm("¿Deseas guardar automáticamente las 9 preguntas sugeridas de práctica (capitales, banderas y comparativos) en esta unidad?")) return;
+      if (!confirm("¿Deseas guardar automáticamente las 9 preguntas sugeridas de práctica en esta unidad en MariaDB?")) return;
 
       const sampleBank = [
-        { pregunta: "What’s the Capital of Canada?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Ottawa", "Toronto", "Vancouver"], correcta: "Ottawa" },
-        { pregunta: "What’s the capital of Brazil?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Brasilia", "Rio de Janeiro", "Sao Paulo"], correcta: "Brasilia" },
-        { pregunta: "What’s the capital of Ecuador?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Quito", "Guayaquil", "Cuenca"], correcta: "Quito" },
-        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/canada.jpg", tipo: "multiple", opciones: ["Canada", "USA", "Spain"], correcta: "Canada" },
-        { pregunta: "Where is Chile?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["South America", "North America", "Europe"], correcta: "South America" },
-        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/brasil.jpg", tipo: "multiple", opciones: ["Brazil", "Argentina", "Chile"], correcta: "Brazil" },
-        { pregunta: "Argentina is ______ than Brazil.", imagen: "img/6unidad/unit1/comparar1.jpg", tipo: "fill", opciones: ["smaller", "bigger", "longer", "tallest"], correcta: "smaller" },
-        { pregunta: "Canada is the ______ country of all.", imagen: "img/6unidad/unit1/comparar2.jpg", tipo: "fill", opciones: ["biggest", "smallest", "longer", "big"], correcta: "biggest" },
-        { pregunta: "Chile is ______.", imagen: "img/6unidad/unit1/comparar6.jpg", tipo: "fill", opciones: ["long.", "bigger", "fastest", "small"], correcta: "long." }
+        { pregunta: "What’s the Capital of Canada?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Ottawa", "Toronto", "Vancouver"], correcta: "Ottawa", categoria: 1 },
+        { pregunta: "What’s the capital of Brazil?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Brasilia", "Rio de Janeiro", "Sao Paulo"], correcta: "Brasilia", categoria: 1 },
+        { pregunta: "What’s the capital of Ecuador?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Quito", "Guayaquil", "Cuenca"], correcta: "Quito", categoria: 1 },
+        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/canada.jpg", tipo: "multiple", opciones: ["Canada", "USA", "Spain"], correcta: "Canada", categoria: 2 },
+        { pregunta: "Where is Chile?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["South America", "North America", "Europe"], correcta: "South America", categoria: 2 },
+        { pregunta: "What country is this?", imagen: "img/6unidad/unit1/brasil.jpg", tipo: "multiple", opciones: ["Brazil", "Argentina", "Chile"], correcta: "Brazil", categoria: 2 },
+        { pregunta: "Argentina is ______ than Brazil.", imagen: "img/6unidad/unit1/comparar1.jpg", tipo: "fill", opciones: ["smaller", "bigger", "longer", "tallest"], correcta: "smaller", categoria: 3 },
+        { pregunta: "Canada is the ______ country of all.", imagen: "img/6unidad/unit1/comparar2.jpg", tipo: "fill", opciones: ["biggest", "smallest", "longer", "big"], correcta: "biggest", categoria: 3 },
+        { pregunta: "Chile is ______.", imagen: "img/6unidad/unit1/comparar6.jpg", tipo: "fill", opciones: ["long.", "bigger", "fastest", "small"], correcta: "long.", categoria: 3 }
       ];
 
-      for (const q of sampleBank) {
-        await addDoc(collection(db, "preguntas"), {
-          unidadId: currentUnitId,
-          tipo: q.tipo,
-          pregunta: q.pregunta,
-          imagen: q.imagen,
-          opciones: q.opciones,
-          correcta: q.correcta,
-          createdAt: new Date().toISOString()
-        });
+      try {
+        for (const q of sampleBank) {
+          await api.createPregunta({
+            unidadId: currentUnitId,
+            tipo: q.tipo,
+            pregunta: q.pregunta,
+            imagen: q.imagen,
+            opciones: q.opciones,
+            correcta: q.correcta,
+            categoria: q.categoria
+          });
+        }
+        alert("¡9 preguntas cargadas automáticamente en MariaDB para esta unidad!");
+        loadQuestions(currentUnitId);
+      } catch (err) {
+        alert("Error al cargar preguntas en MariaDB: " + err.message);
       }
-      alert("¡9 preguntas cargadas automáticamente en Firestore para esta unidad!");
     };
 
-    function loadQuestions(unitId) {
-      const q = query(collection(db, "preguntas"), where("unidadId", "==", unitId));
-      onSnapshot(q, (snapshot) => {
-        const list = document.getElementById('questions-list');
-        const badge = document.getElementById('badge-count');
-        list.innerHTML = '';
-        let count = 0;
+    async function loadQuestions(unitId) {
+      const list = document.getElementById('questions-list');
+      const badge = document.getElementById('badge-count');
+      list.innerHTML = '<div class="text-center p-6 text-gray-400">Cargando desafíos...</div>';
 
-        if (snapshot.empty) {
+      try {
+        const questions = await api.getPreguntas(unitId);
+        list.innerHTML = '';
+
+        if (!questions || questions.length === 0) {
           list.innerHTML = `
             <div class="text-center p-8 bg-white rounded-2xl border text-gray-400">
               <p class="font-medium text-sm">No hay desafíos aún en esta unidad.</p>
-              <p class="text-xs text-gray-300 mt-1">Usa el formulario para añadir preguntas interactivas.</p>
+              <p class="text-xs text-gray-300 mt-1">Usa el formulario para añadir preguntas interactivas a MariaDB.</p>
             </div>`;
           badge.innerText = "0 Items";
           return;
         }
 
-        snapshot.forEach(d => {
+        let count = 0;
+        questions.forEach(qData => {
           count++;
-          const qData = d.data();
-          const isFill = qData.tipo === 'fill';
+          const isFill = qData.tipo === 'fill' || qData.type === 'drag-and-drop';
           list.innerHTML += `
           <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex gap-6 items-center">
             <div class="relative shrink-0">
@@ -438,7 +506,7 @@
             <div class="flex-1">
               <div class="flex justify-between items-start">
                 <h5 class="font-bold text-gray-800 leading-tight">${qData.pregunta}</h5>
-                <button onclick="window.deleteItem('preguntas', '${d.id}')" class="text-gray-300 hover:text-red-500 transition ml-4"><i class="fa-solid fa-trash-can"></i></button>
+                <button onclick="window.deleteItem('preguntas', '${qData.id}')" class="text-gray-300 hover:text-red-500 transition ml-4"><i class="fa-solid fa-trash-can"></i></button>
               </div>
               <div class="flex flex-wrap gap-2 mt-3">
                 ${(qData.opciones || []).map(o => `
@@ -450,7 +518,10 @@
           </div>`;
         });
         badge.innerText = `${count} Desafíos`;
-      });
+      } catch (err) {
+        console.error("Error al cargar preguntas:", err);
+        list.innerHTML = '<div class="text-center p-6 text-red-500">Error al cargar preguntas desde MariaDB.</div>';
+      }
     }
 
     // --- RECURSOS ---
@@ -459,25 +530,32 @@
       const rawUrl = document.getElementById('res-url').value.trim();
       const type = document.getElementById('res-type').value;
       if (!title || !rawUrl) return alert("Completa el título y el link.");
-      await addDoc(collection(db, "recursos"), { titulo: title, url: cleanDriveLink(rawUrl), tipo: type, unidadId: currentUnitId, createdAt: new Date().toISOString() });
-      document.getElementById('res-title').value = ''; 
-      document.getElementById('res-url').value = '';
-      alert("Material guardado exitosamente");
+
+      try {
+        await api.createRecurso(title, type, cleanDriveLink(rawUrl), currentUnitId);
+        document.getElementById('res-title').value = ''; 
+        document.getElementById('res-url').value = '';
+        alert("Material guardado exitosamente en MariaDB");
+        loadResources(currentUnitId);
+      } catch (err) {
+        alert("Error al guardar material en MariaDB: " + err.message);
+      }
     };
 
-    function loadResources(unitId) {
-      const q = query(collection(db, "recursos"), where("unidadId", "==", unitId));
-      onSnapshot(q, (snapshot) => {
-        const list = document.getElementById('resources-list');
+    async function loadResources(unitId) {
+      const list = document.getElementById('resources-list');
+      list.innerHTML = '<div class="text-center p-6 text-gray-400">Cargando recursos...</div>';
+
+      try {
+        const recursos = await api.getRecursos(unitId);
         list.innerHTML = '';
         
-        if (snapshot.empty) {
-          list.innerHTML = `<div class="p-6 bg-white rounded-xl border text-center text-gray-400 text-sm">No hay recursos subidos aún para esta unidad.</div>`;
+        if (!recursos || recursos.length === 0) {
+          list.innerHTML = `<div class="p-6 bg-white rounded-xl border text-center text-gray-400 text-sm">No hay recursos subidos aún para esta unidad en MariaDB.</div>`;
           return;
         }
 
-        snapshot.forEach(d => {
-          const res = d.data();
+        recursos.forEach(res => {
           list.innerHTML += `
           <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center group hover:border-[#2470BB] transition">
             <div class="flex items-center gap-4">
@@ -488,17 +566,38 @@
             </div>
             <div class="flex items-center gap-3">
               <a href="${res.url}" target="_blank" class="text-[#2470BB] text-xs font-bold px-3 py-1.5 bg-blue-50 hover:bg-[#2470BB] hover:text-white rounded-lg transition">ABRIR ↗</a>
-              <button class="text-gray-300 hover:text-red-500 transition p-1.5" onclick="window.deleteItem('recursos', '${d.id}')"><i class="fa-solid fa-trash-can"></i></button>
+              <button class="text-gray-300 hover:text-red-500 transition p-1.5" onclick="window.deleteItem('recursos', '${res.id}')"><i class="fa-solid fa-trash-can"></i></button>
             </div>
           </div>`;
         });
-      });
+      } catch (err) {
+        console.error("Error al cargar recursos:", err);
+        list.innerHTML = '<div class="p-6 text-center text-red-500 text-sm">Error al cargar recursos desde MariaDB.</div>';
+      }
     }
 
     // UTILIDADES CRUD
     window.deleteItem = async (col, id) => { 
-      if(confirm("¿Estás seguro de eliminar este elemento?")) await deleteDoc(doc(db, col, id)); 
+      if (!confirm("¿Estás seguro de eliminar este elemento de MariaDB?")) return;
+      try {
+        if (col === 'materias') {
+          await api.deleteMateria(id);
+          loadSubjects(currentGradeId);
+        } else if (col === 'unidades') {
+          await api.deleteUnidad(id);
+          loadUnits(currentSubjectId);
+        } else if (col === 'recursos') {
+          await api.deleteRecurso(id);
+          loadResources(currentUnitId);
+        } else if (col === 'preguntas') {
+          await api.deletePregunta(id);
+          loadQuestions(currentUnitId);
+        }
+      } catch (err) {
+        alert("Error al eliminar elemento de MariaDB: " + err.message);
+      }
     };
+
     window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
     window.goBackToDashboard = () => switchView('view-dashboard');
@@ -517,17 +616,27 @@
     window.addNewSubject = async () => {
       const name = document.getElementById('input-subject-name').value.trim();
       if (!name) return;
-      await addDoc(collection(db, "materias"), { nombre: name, gradoId: currentGradeId, createdAt: new Date().toISOString() });
-      closeModal('modal-subject');
-      document.getElementById('input-subject-name').value = '';
+      try {
+        await api.createMateria(name, currentGradeId);
+        closeModal('modal-subject');
+        document.getElementById('input-subject-name').value = '';
+        loadSubjects(currentGradeId);
+      } catch (err) {
+        alert("Error al crear materia en MariaDB: " + err.message);
+      }
     };
 
     window.addNewUnit = async () => {
       const name = document.getElementById('input-unit-name').value.trim();
       if (!name) return;
-      await addDoc(collection(db, "unidades"), { titulo: name, materiaId: currentSubjectId, createdAt: new Date().toISOString() });
-      closeModal('modal-unit');
-      document.getElementById('input-unit-name').value = '';
+      try {
+        await api.createUnidad(name, currentSubjectId);
+        closeModal('modal-unit');
+        document.getElementById('input-unit-name').value = '';
+        loadUnits(currentSubjectId);
+      } catch (err) {
+        alert("Error al crear unidad en MariaDB: " + err.message);
+      }
     };
   </script>
 </body>

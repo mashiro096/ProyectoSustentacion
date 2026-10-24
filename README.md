@@ -104,23 +104,36 @@ A diferencia de los prototipos iniciales que contenían bancos de preguntas est�
 
 ---
 
-## 🚀 5. Cómo Ejecutar el Proyecto para la Sustentación
+## 🚀 5. Cómo Ejecutar el Proyecto con MariaDB / MySQL
 
-Debido a que el proyecto utiliza módulos modernos de JavaScript (`import` / `export` ES Modules), se recomienda servirlo a través de un servidor local:
-
-### Opción A: Usando Python (Ya instalado en el equipo)
-Abre PowerShell en la carpeta del proyecto y ejecuta:
-```powershell
-cd C:\Users\LENOVO\Documents\ProyectoSustentacion
-python -m http.server 8000
+### Paso 1: Configurar Variables de Entorno (`.env`)
+Abre el archivo [`.env`](file:///c:/Users/LENOVO/Documents/ProyectoSustentacion/.env) y coloca las credenciales de tu base de datos MariaDB / MySQL:
+```ini
+PORT=3000
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=tu_password_aqui
+DB_NAME=singling_db
 ```
-Luego abre en el navegador:
-- Portal Estudiante: `http://localhost:8000/index.html`
-- Panel Docente: `http://localhost:8000/admin.html`
 
-### Opción B: Usando Visual Studio Code / Live Server
-1. Abre la carpeta `C:\Users\LENOVO\Documents\ProyectoSustentacion` en VS Code.
-2. Haz clic derecho en `index.html` y selecciona **"Open with Live Server"**.
+### Paso 2: Probar la Conexión a la Base de Datos
+Asegúrate de que tu servicio MariaDB/MySQL esté iniciado (en XAMPP, Laragon, WampServer o Servicios de Windows) y ejecuta:
+```bash
+npm run test:db
+```
+El script diagnosticará la conexión, validará que las tablas existan y mostrará el conteo de registros en consola.
+
+### Paso 3: Iniciar el Servidor Web
+Ejecuta en tu terminal:
+```bash
+npm start
+```
+
+Luego abre en tu navegador:
+- 🎓 **Portal del Estudiante:** `http://localhost:3000/index.html`
+- 👨‍🏫 **Panel del Docente:** `http://localhost:3000/admin.html`
+- 🔍 **Endpoint Diagnóstico DB:** `http://localhost:3000/api/status`
 
 ---
 
