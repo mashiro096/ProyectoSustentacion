@@ -1,7 +1,7 @@
 {
   "name": "singling-plataforma-educativa",
   "version": "1.0.0",
-  "description": "Plataforma Educativa Interactiva de Inglés con MariaDB/MySQL",
+  "description": "Plataforma Educativa Interactiva de Inglés con PostgreSQL",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -11,8 +11,8 @@
   },
   "keywords": [
     "singling",
-    "mariadb",
-    "mysql",
+    "postgresql",
+    "postgres",
     "educacion",
     "ingles"
   ],
@@ -22,6 +22,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mysql2": "^3.12.0"
+    "pg": "^8.23.1"
   }
 }

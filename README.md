@@ -104,27 +104,39 @@ A diferencia de los prototipos iniciales que contenían bancos de preguntas est�
 
 ---
 
-## 🚀 5. Cómo Ejecutar el Proyecto con MariaDB / MySQL
+## 🚀 5. Cómo Ejecutar el Proyecto con PostgreSQL
 
 ### Paso 1: Configurar Variables de Entorno (`.env`)
-Abre el archivo [`.env`](file:///c:/Users/LENOVO/Documents/ProyectoSustentacion/.env) y coloca las credenciales de tu base de datos MariaDB / MySQL:
+Abre el archivo [`.env`](file:///c:/Users/LENOVO/Documents/ProyectoSustentacion/.env) y coloca la contraseña real en la cadena de conexión o parámetros individuales:
 ```ini
 PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=tu_password_aqui
+
+# Cadena de conexión directa a PostgreSQL
+DATABASE_URL=postgresql://singling_app:tu_password_real@38.146.27.217:5432/singling_db
+
+# O parámetros desglosados:
+DB_HOST=38.146.27.217
+DB_PORT=5432
+DB_USER=singling_app
+DB_PASSWORD=tu_password_real
 DB_NAME=singling_db
+DB_SSL=false
 ```
 
-### Paso 2: Probar la Conexión a la Base de Datos
-Asegúrate de que tu servicio MariaDB/MySQL esté iniciado (en XAMPP, Laragon, WampServer o Servicios de Windows) y ejecuta:
+### Paso 2: Importar el Esquema en PostgreSQL (si no está importado)
+Importa el archivo [`database/esquema_singling_postgresql.sql`](file:///c:/Users/LENOVO/Documents/ProyectoSustentacion/database/esquema_singling_postgresql.sql) en tu cliente PostgreSQL (DBeaver, pgAdmin, DataGrip o psql):
+```bash
+psql -h 38.146.27.217 -p 5432 -U singling_app -d singling_db -f database/esquema_singling_postgresql.sql
+```
+
+### Paso 3: Probar la Conexión a PostgreSQL
+Ejecuta el script de prueba y diagnóstico:
 ```bash
 npm run test:db
 ```
 El script diagnosticará la conexión, validará que las tablas existan y mostrará el conteo de registros en consola.
 
-### Paso 3: Iniciar el Servidor Web
+### Paso 4: Iniciar el Servidor Web
 Ejecuta en tu terminal:
 ```bash
 npm start
