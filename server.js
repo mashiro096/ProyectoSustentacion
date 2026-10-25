@@ -1,5 +1,5 @@
 // ==============================================================================
-// SERVIDOR WEB Y API REST PARA MARIADB / MYSQL
+// SERVIDOR WEB Y API REST PARA POSTGRESQL
 // SingLing - Plataforma Educativa Interactiva de Inglés
 // ==============================================================================
 
@@ -38,15 +38,15 @@ async function initConfigTable() {
       CREATE TABLE IF NOT EXISTS configuraciones_sistema (
         clave VARCHAR(100) PRIMARY KEY,
         valor TEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
     const rows = await query('SELECT clave, valor FROM configuraciones_sistema');
     for (const r of rows) {
       configCache.set(r.clave, r.valor);
     }
   } catch (err) {
-    // Si la tabla no está creada, funciona con la memoria caché sin romper nada
+    // Si la tabla aún no está lista en la BD remota, funciona con la memoria caché sin romper la app
     console.warn('ℹ️ Modo fallback de configuración en memoria:', err.message);
   }
 }
@@ -67,7 +67,9 @@ async function setConfig(key, value) {
   configCache.set(key, String(value));
   try {
     await query(
-      'INSERT INTO configuraciones_sistema (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)',
+      `INSERT INTO configuraciones_sistema (clave, valor, updated_at) 
+       VALUES (?, ?, NOW()) 
+       ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
       [key, String(value)]
     );
   } catch (e) {
@@ -75,7 +77,7 @@ async function setConfig(key, value) {
   }
 }
 
-// Inicializar tabla si MariaDB está disponible
+// Inicializar tabla si PostgreSQL está disponible
 initConfigTable().catch(() => {});
 
 // ==============================================================================
@@ -90,22 +92,22 @@ app.get('/api/status', async (req, res) => {
   }
 
   try {
-    const [grados] = await pool.query('SELECT COUNT(*) AS total FROM grados');
-    const [materias] = await pool.query('SELECT COUNT(*) AS total FROM materias');
-    const [unidades] = await pool.query('SELECT COUNT(*) AS total FROM unidades');
-    const [recursos] = await pool.query('SELECT COUNT(*) AS total FROM recursos');
-    const [preguntas] = await pool.query('SELECT COUNT(*) AS total FROM preguntas');
-    const [intentos] = await pool.query('SELECT COUNT(*) AS total FROM intentos_evaluacion');
+    const grados = await query('SELECT COUNT(*) AS total FROM grados');
+    const materias = await query('SELECT COUNT(*) AS total FROM materias');
+    const unidades = await query('SELECT COUNT(*) AS total FROM unidades');
+    const recursos = await query('SELECT COUNT(*) AS total FROM recursos');
+    const preguntas = await query('SELECT COUNT(*) AS total FROM preguntas');
+    const intentos = await query('SELECT COUNT(*) AS total FROM intentos_evaluacion');
 
     res.json({
       ...result,
       counts: {
-        grados: grados[0].total,
-        materias: materias[0].total,
-        unidades: unidades[0].total,
-        recursos: recursos[0].total,
-        preguntas: preguntas[0].total,
-        intentos: intentos[0].total
+        grados: grados[0]?.total || 0,
+        materias: materias[0]?.total || 0,
+        unidades: unidades[0]?.total || 0,
+        recursos: recursos[0]?.total || 0,
+        preguntas: preguntas[0]?.total || 0,
+        intentos: intentos[0]?.total || 0
       }
     });
   } catch (err) {
@@ -128,7 +130,7 @@ app.get('/api/materias', async (req, res) => {
   try {
     const { gradoId } = req.query;
     let sql = `
-      SELECT m.id, m.nombre, m.descripcion, m.grado_id AS gradoId, g.codigo AS gradoCodigo, g.nombre AS gradoNombre
+      SELECT m.id, m.nombre, m.descripcion, m.grado_id AS "gradoId", g.codigo AS "gradoCodigo", g.nombre AS "gradoNombre"
       FROM materias m
       JOIN grados g ON m.grado_id = g.id
     `;
@@ -136,7 +138,7 @@ app.get('/api/materias', async (req, res) => {
 
     if (gradoId) {
       sql += ` WHERE m.grado_id = ? OR g.codigo = ?`;
-      params.push(gradoId, gradoId);
+      params.push(parseInt(gradoId, 10) || 0, String(gradoId));
     }
 
     sql += ` ORDER BY m.id ASC`;
@@ -155,11 +157,14 @@ app.post('/api/materias', async (req, res) => {
     }
 
     // Resolver grado_id si viene como código '6' o id numérico
-    const grados = await query('SELECT id FROM grados WHERE id = ? OR codigo = ? LIMIT 1', [gradoId, gradoId]);
+    const grados = await query('SELECT id FROM grados WHERE id = ? OR codigo = ? LIMIT 1', [
+      parseInt(gradoId, 10) || 0,
+      String(gradoId)
+    ]);
     const finalGradoId = grados.length > 0 ? grados[0].id : parseInt(gradoId, 10);
 
     const result = await query(
-      'INSERT INTO materias (nombre, grado_id, descripcion) VALUES (?, ?, ?)',
+      'INSERT INTO materias (nombre, grado_id, descripcion) VALUES (?, ?, ?) RETURNING id',
       [nombre.trim(), finalGradoId, descripcion || null]
     );
 
@@ -167,7 +172,7 @@ app.post('/api/materias', async (req, res) => {
       id: result.insertId,
       nombre,
       gradoId: finalGradoId,
-      message: 'Materia creada exitosamente'
+      message: 'Materia creada exitosamente en PostgreSQL'
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear materia', details: error.message });
@@ -188,12 +193,12 @@ app.delete('/api/materias/:id', async (req, res) => {
 app.get('/api/unidades', async (req, res) => {
   try {
     const { materiaId } = req.query;
-    let sql = 'SELECT id, materia_id AS materiaId, numero_unidad AS numeroUnidad, titulo, descripcion FROM unidades';
+    let sql = 'SELECT id, materia_id AS "materiaId", numero_unidad AS "numeroUnidad", titulo, descripcion FROM unidades';
     const params = [];
 
     if (materiaId) {
       sql += ' WHERE materia_id = ?';
-      params.push(materiaId);
+      params.push(parseInt(materiaId, 10));
     }
 
     sql += ' ORDER BY numero_unidad ASC, id ASC';
@@ -237,7 +242,7 @@ app.post('/api/unidades/:id/config', async (req, res) => {
     res.json({
       unidadId: id,
       limitePreguntas: val === 'all' ? 'all' : parseInt(val, 10),
-      message: 'Configuración guardada exitosamente'
+      message: 'Configuración guardada exitosamente en PostgreSQL'
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al actualizar configuración de unidad', details: error.message });
@@ -253,22 +258,24 @@ app.post('/api/unidades', async (req, res) => {
 
     const num = numeroUnidad || 1;
     const result = await query(
-      'INSERT INTO unidades (titulo, materia_id, numero_unidad, descripcion) VALUES (?, ?, ?, ?)',
-      [titulo.trim(), materiaId, num, descripcion || null]
+      'INSERT INTO unidades (titulo, materia_id, numero_unidad, descripcion) VALUES (?, ?, ?, ?) RETURNING id',
+      [titulo.trim(), parseInt(materiaId, 10), num, descripcion || null]
     );
+
+    const newId = result.insertId;
 
     if (limitePreguntas !== undefined) {
       const val = limitePreguntas === 'all' ? 'all' : String(parseInt(limitePreguntas, 10) || 10);
-      await setConfig(`quiz_limit_unit_${result.insertId}`, val);
+      await setConfig(`quiz_limit_unit_${newId}`, val);
     }
 
     res.status(201).json({
-      id: result.insertId,
+      id: newId,
       titulo,
       materiaId,
       numeroUnidad: num,
       limitePreguntas: limitePreguntas || 10,
-      message: 'Unidad creada exitosamente'
+      message: 'Unidad creada exitosamente en PostgreSQL'
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear unidad', details: error.message });
@@ -289,12 +296,12 @@ app.delete('/api/unidades/:id', async (req, res) => {
 app.get('/api/recursos', async (req, res) => {
   try {
     const { unidadId } = req.query;
-    let sql = 'SELECT id, unidad_id AS unidadId, titulo, tipo, url FROM recursos';
+    let sql = 'SELECT id, unidad_id AS "unidadId", titulo, tipo, url FROM recursos';
     const params = [];
 
     if (unidadId) {
       sql += ' WHERE unidad_id = ?';
-      params.push(unidadId);
+      params.push(parseInt(unidadId, 10));
     }
 
     sql += ' ORDER BY id ASC';
@@ -314,8 +321,8 @@ app.post('/api/recursos', async (req, res) => {
 
     const finalTipo = tipo === 'video' ? 'video' : 'pdf';
     const result = await query(
-      'INSERT INTO recursos (titulo, tipo, url, unidad_id) VALUES (?, ?, ?, ?)',
-      [titulo.trim(), finalTipo, url.trim(), unidadId]
+      'INSERT INTO recursos (titulo, tipo, url, unidad_id) VALUES (?, ?, ?, ?) RETURNING id',
+      [titulo.trim(), finalTipo, url.trim(), parseInt(unidadId, 10)]
     );
 
     res.status(201).json({
@@ -324,7 +331,7 @@ app.post('/api/recursos', async (req, res) => {
       tipo: finalTipo,
       url,
       unidadId,
-      message: 'Recurso creado exitosamente'
+      message: 'Recurso creado exitosamente en PostgreSQL'
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear recurso', details: error.message });
@@ -356,7 +363,7 @@ app.get('/api/preguntas', async (req, res) => {
 
     if (unidadId) {
       sql += ' WHERE p.unidad_id = ?';
-      params.push(unidadId);
+      params.push(parseInt(unidadId, 10));
     }
 
     sql += ' ORDER BY p.id ASC, o.orden ASC, o.id ASC';
@@ -420,10 +427,10 @@ app.post('/api/preguntas', async (req, res) => {
     const cleanPregunta = pregunta.replace(/\[box\]/g, '______').trim();
     const finalCategoria = categoria ? parseInt(categoria, 10) : 1;
 
-    // 1. Insertar pregunta
+    // 1. Insertar pregunta y obtener id generado
     const [resultPregunta] = await connection.execute(
-      'INSERT INTO preguntas (unidad_id, tipo, pregunta, imagen, categoria) VALUES (?, ?, ?, ?, ?)',
-      [unidadId, finalTipo, cleanPregunta, imagen || null, finalCategoria]
+      'INSERT INTO preguntas (unidad_id, tipo, pregunta, imagen, categoria) VALUES (?, ?, ?, ?, ?) RETURNING id',
+      [parseInt(unidadId, 10), finalTipo, cleanPregunta, imagen || null, finalCategoria]
     );
 
     const preguntaId = resultPregunta.insertId;
@@ -436,7 +443,7 @@ app.post('/api/preguntas', async (req, res) => {
     for (const opt of validOptions) {
       const esCorrecta = opt.toLowerCase() === targetCorrect ? 1 : 0;
       await connection.execute(
-        'INSERT INTO opciones_pregunta (pregunta_id, texto_opcion, es_correcta, orden) VALUES (?, ?, ?, ?)',
+        'INSERT INTO opciones_pregunta (pregunta_id, texto_opcion, es_correcta, orden) VALUES (?, ?, ?, ?) RETURNING id',
         [preguntaId, opt, esCorrecta, orden++]
       );
     }
@@ -451,7 +458,7 @@ app.post('/api/preguntas', async (req, res) => {
       tipo: finalTipo,
       opciones: validOptions,
       correcta: correcta || validOptions[0],
-      message: 'Pregunta guardada exitosamente en MariaDB'
+      message: 'Pregunta guardada exitosamente en PostgreSQL'
     });
   } catch (error) {
     await connection.rollback();
@@ -498,15 +505,15 @@ app.post('/api/intentos', async (req, res) => {
     const result = await query(
       `INSERT INTO intentos_evaluacion 
        (usuario_id, unidad_id, puntaje_obtenido, total_preguntas, porcentaje, desempeno, categoria_debil)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [usuarioId || null, unidadId, puntajeObtenido, totalPreguntas, pct, color, categoriaDebil || null]
+       VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      [usuarioId ? parseInt(usuarioId, 10) : null, parseInt(unidadId, 10), puntajeObtenido, totalPreguntas, pct, color, categoriaDebil || null]
     );
 
     res.status(201).json({
       id: result.insertId,
       desempeno: color,
       porcentaje: pct,
-      message: 'Intento registrado exitosamente en MariaDB'
+      message: 'Intento registrado exitosamente en PostgreSQL'
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al registrar intento', details: error.message });
@@ -515,14 +522,11 @@ app.post('/api/intentos', async (req, res) => {
 
 app.get('/api/intentos', async (req, res) => {
   try {
-    const { unidadId } = req.query;
-    let sql = 'SELECT * FROM vw_desempeno_estudiantes';
-    const params = [];
-
-    const rows = await query(sql, params);
+    const sql = 'SELECT * FROM vw_desempeno_estudiantes';
+    const rows = await query(sql);
     res.json(rows);
   } catch (error) {
-    // Si la vista no existe, consultar directo la tabla
+    // Si la vista aún no está compilada, consultar directo la tabla
     try {
       const rows = await query('SELECT * FROM intentos_evaluacion ORDER BY fecha_intento DESC');
       res.json(rows);
@@ -541,6 +545,6 @@ app.listen(PORT, () => {
   console.log(`🎓 Portal Estudiante:  http://localhost:${PORT}/index.html`);
   console.log(`👨‍🏫 Panel Docente:     http://localhost:${PORT}/admin.html`);
   console.log(`🔍 Diagnóstico DB:     http://localhost:${PORT}/api/status`);
-  console.log(`📁 MariaDB Config:     ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
+  console.log(`🐘 PostgreSQL Config:  ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
   console.log('============================================================\n');
 });

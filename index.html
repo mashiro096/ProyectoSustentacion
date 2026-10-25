@@ -243,11 +243,11 @@
     </div>
   </div>
 
-  <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A MARIADB / MYSQL ==================== -->
+  <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A POSTGRESQL ==================== -->
   <script type="module">
     import { api, initDbStatusBadge } from "./js/api.js";
 
-    // 1. Inicializar indicador visual de conexión a MariaDB
+    // 1. Inicializar indicador visual de conexión a PostgreSQL
     initDbStatusBadge();
 
     // 2. Grados de Educación General Básica
@@ -269,7 +269,7 @@
     let currentUnitId = null;
     let currentUnitTitle = "";
 
-    // 4. Variables del Motor de Quiz (Se llena automáticamente de MariaDB)
+    // 4. Variables del Motor de Quiz (Se llena automáticamente de PostgreSQL)
     let unitQuestions = [];
     let currentUnitQuestionLimit = 10;
     let quizData = [];
@@ -313,7 +313,7 @@
       navigate('splash2', 'view-grades');
     };
 
-    // 7. Cargar Materias dinámicas desde MariaDB
+    // 7. Cargar Materias dinámicas desde PostgreSQL
     window.loadSubjects = async (gradeId, gradeFullName) => {
       currentGradeId = gradeId;
       currentGradeName = gradeFullName;
@@ -321,7 +321,7 @@
       navigate('view-grades', 'view-subjects');
 
       const container = document.getElementById('lista-materias');
-      container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias desde MariaDB...</div>';
+      container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias desde PostgreSQL...</div>';
 
       try {
         const materias = await api.getMaterias(gradeId);
@@ -346,11 +346,11 @@
         });
       } catch (err) {
         console.error("Error al cargar materias:", err);
-        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al conectar con MariaDB. Asegúrate de iniciar el servidor con npm start.</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al conectar con PostgreSQL. Asegúrate de iniciar el servidor con npm start.</div>';
       }
     };
 
-    // 8. Cargar Unidades dinámicas desde MariaDB
+    // 8. Cargar Unidades dinámicas desde PostgreSQL
     window.loadUnits = async (subjectId, subjectName) => {
       currentSubjectId = subjectId;
       currentSubjectName = subjectName;
@@ -358,7 +358,7 @@
       navigate('view-subjects', 'view-units');
 
       const container = document.getElementById('lista-unidades');
-      container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades desde MariaDB...</div>';
+      container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades desde PostgreSQL...</div>';
 
       try {
         const unidades = await api.getUnidades(subjectId);
@@ -393,7 +393,7 @@
         });
       } catch (err) {
         console.error("Error al cargar unidades:", err);
-        container.innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con MariaDB.</div>';
+        container.innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con PostgreSQL.</div>';
       }
     };
 
@@ -420,7 +420,7 @@
           <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
           <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
           <div id="recursos-container" class="space-y-3">
-            <div class="text-center py-6 text-gray-400">Cargando recursos desde MariaDB...</div>
+            <div class="text-center py-6 text-gray-400">Cargando recursos desde PostgreSQL...</div>
           </div>`;
 
         try {
@@ -456,10 +456,10 @@
           });
         } catch (err) {
           console.error("Error al cargar recursos:", err);
-          document.getElementById('recursos-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al cargar recursos desde MariaDB.</div>';
+          document.getElementById('recursos-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al cargar recursos desde PostgreSQL.</div>';
         }
       } else {
-        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE MARIADB
+        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE POSTGRESQL
         btnAct.className = "flex flex-col items-center text-[#2470BB] transition";
         btnRec.className = "flex flex-col items-center text-gray-400 transition";
 
@@ -467,7 +467,7 @@
           <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Actividades</h1>
           <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
           <div id="actividades-container" class="space-y-4 max-w-lg mx-auto">
-            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en MariaDB...</div>
+            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en PostgreSQL...</div>
           </div>`;
 
         try {
@@ -478,7 +478,7 @@
           const actContainer = document.getElementById('actividades-container');
           actContainer.innerHTML = '';
 
-          // 1. Si no hay preguntas en MariaDB para esta unidad:
+          // 1. Si no hay preguntas en PostgreSQL para esta unidad:
           if (!preguntas || preguntas.length === 0) {
             unitQuestions = [];
             actContainer.innerHTML = `
@@ -492,7 +492,7 @@
             return;
           }
 
-          // 2. Si hay preguntas en MariaDB, se cargan de forma automática:
+          // 2. Si hay preguntas en PostgreSQL, se cargan de forma automática:
           unitQuestions = preguntas.map(doc => ({
             id: String(doc.id),
             question: doc.pregunta || doc.question,
@@ -517,7 +517,7 @@
                 <h3 class="font-bold text-gray-800 text-lg">${currentUnitTitle} - Test Interactivo</h3>
                 <p class="text-xs text-sky-600 font-bold mt-0.5">
                   🎲 ${displayLimit} preguntas seleccionadas al azar
-                  <span class="text-gray-400 font-normal">(de ${totalInDb} disponibles en MariaDB)</span>
+                  <span class="text-gray-400 font-normal">(de ${totalInDb} disponibles en PostgreSQL)</span>
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -531,11 +531,11 @@
                 <i class="fa-solid fa-dice text-[#2470BB]"></i>
                 <span>Selección Aleatoria Automática</span>
               </p>
-              El banco contiene <b>${totalInDb} preguntas</b> en MariaDB. Para esta evaluación se presentarán <b>${displayLimit} preguntas</b> escogidas al azar en cada intento, garantizando variedad pedagógica.
+              El banco contiene <b>${totalInDb} preguntas</b> en PostgreSQL. Para esta evaluación se presentarán <b>${displayLimit} preguntas</b> escogidas al azar en cada intento, garantizando variedad pedagógica.
             </div>`;
         } catch (err) {
           console.error("Error al cargar actividades:", err);
-          document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos MariaDB.</div>';
+          document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos PostgreSQL.</div>';
         }
       }
     };
@@ -562,7 +562,7 @@
         ? unitQuestions.length
         : Math.min(parseInt(currentUnitQuestionLimit, 10) || 10, unitQuestions.length);
 
-      // 2. Barajar aleatoriamente todo el banco de MariaDB y extraer la cantidad configurada
+      // 2. Barajar aleatoriamente todo el banco de PostgreSQL y extraer la cantidad configurada
       const randomQuestions = shuffleArray(unitQuestions).slice(0, limit);
 
       // 3. Barajar también las opciones/distractores de cada pregunta individual
@@ -739,14 +739,14 @@
       const total = quizData.length;
       const percentage = Math.round((score / total) * 100);
 
-      // Guardar registro del intento en MariaDB
+      // Guardar registro del intento en PostgreSQL
       api.saveIntento({
         unidadId: currentUnitId,
         puntajeObtenido: score,
         totalPreguntas: total,
         porcentaje: percentage,
         desempeno: percentage >= 80 ? 'verde' : (percentage >= 50 ? 'amarillo' : 'rojo')
-      }).catch(err => console.warn("No se pudo registrar intento en MariaDB:", err));
+      }).catch(err => console.warn("No se pudo registrar intento en PostgreSQL:", err));
 
       // Actualizar tarjeta del semáforo
       updateUnitCardStatus(score, total, percentage);

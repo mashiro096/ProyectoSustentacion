@@ -1,5 +1,5 @@
 // ==============================================================================
-// CLIENTE API REST PARA CONEXIÓN A MARIADB / MYSQL
+// CLIENTE API REST PARA CONEXIÓN A POSTGRESQL
 // SingLing - Plataforma Educativa Interactiva
 // ==============================================================================
 
@@ -100,7 +100,7 @@ export function cleanDriveLink(url) {
   return trimmed;
 }
 
-// Indicador visual de estado de conexión a MariaDB en la interfaz
+// Indicador visual de estado de conexión a PostgreSQL en la interfaz
 export function initDbStatusBadge(containerId = null) {
   const badgeId = 'singling-db-badge';
   let badge = document.getElementById(badgeId);
@@ -109,7 +109,7 @@ export function initDbStatusBadge(containerId = null) {
     badge = document.createElement('div');
     badge.id = badgeId;
     badge.className = 'fixed bottom-3 right-3 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg transition-all border backdrop-blur-md cursor-pointer';
-    badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping"></span><span>Conectando a MariaDB...</span>`;
+    badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping"></span><span>Conectando a PostgreSQL...</span>`;
     document.body.appendChild(badge);
   }
 
@@ -120,9 +120,9 @@ export function initDbStatusBadge(containerId = null) {
         badge.className = 'fixed bottom-3 right-3 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
         badge.innerHTML = `
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>MariaDB: <b>${data.database || 'singling_db'}</b></span>
+          <span>PostgreSQL: <b>${data.database || 'singling_db'}</b></span>
         `;
-        badge.title = `Conectado a ${data.config?.host}:${data.config?.port} (${data.version || 'MySQL/MariaDB'})`;
+        badge.title = `Conectado a ${data.config?.host}:${data.config?.port} (${data.version || 'PostgreSQL'})`;
       } else {
         throw new Error(data.error || 'Error reportado por el servidor');
       }
@@ -131,15 +131,15 @@ export function initDbStatusBadge(containerId = null) {
       badge.className = 'fixed bottom-3 right-3 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md bg-amber-50 text-amber-800 border border-amber-300 transition-all';
       badge.innerHTML = `
         <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span>MariaDB: Configurar en .env</span>
+        <span>PostgreSQL: Configurar en .env</span>
       `;
-      badge.title = `Para conectar a tu base de datos local: asegúrate de que MariaDB/MySQL esté activo y ejecuta "npm start". (${err.message})`;
+      badge.title = `Para conectar a PostgreSQL: configura tu contraseña en .env y ejecuta "npm start". (${err.message})`;
       badge.onclick = () => {
         alert(
-          "ℹ️ Estado de Conexión a MariaDB / MySQL\n\n" +
+          "ℹ️ Estado de Conexión a PostgreSQL\n\n" +
           "Para que tu base de datos funcione:\n" +
-          "1. Asegúrate de iniciar MariaDB o MySQL (en XAMPP, Laragon o Servicios de Windows).\n" +
-          "2. Verifica tu usuario y contraseña en el archivo .env de este proyecto.\n" +
+          "1. Verifica la contraseña en la variable DATABASE_URL o DB_PASSWORD del archivo .env.\n" +
+          "2. Asegúrate de haber importado database/esquema_singling_postgresql.sql en tu base de datos.\n" +
           "3. Ejecuta 'npm start' en la terminal para iniciar el servidor.\n\n" +
           "Detalle del error: " + err.message
         );
