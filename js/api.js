@@ -4,7 +4,7 @@
 // ==============================================================================
 
 // Determinar URL base de la API automáticamente
-const API_BASE = (window.location.protocol.startsWith('http')) 
+const API_BASE = (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) 
   ? '/api' 
   : 'http://localhost:3000/api';
 
@@ -83,8 +83,212 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data)
   }),
-  getIntentos: (unidadId) => request(`/intentos${unidadId ? `?unidadId=${encodeURIComponent(unidadId)}` : ''}`)
+  getIntentos: (unidadId) => request(`/intentos${unidadId ? `?unidadId=${encodeURIComponent(unidadId)}` : ''}`),
+
+  // 8. Actividades Lúdicas Interactivas (Memorama, Crucigrama, Sopa de Letras, Ahorcado, Fill)
+  getActividades: (unidadId, tipo) => {
+    const params = new URLSearchParams();
+    if (unidadId) params.append('unidadId', unidadId);
+    if (tipo) params.append('tipo', tipo);
+    const qs = params.toString();
+    return request(`/actividades${qs ? `?${qs}` : ''}`);
+  },
+  getActividad: (id) => request(`/actividades/${id}`),
+  createActividad: (data) => request('/actividades', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  updateActividad: (id, data) => request(`/actividades/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  deleteActividad: (id) => request(`/actividades/${id}`, { method: 'DELETE' }),
+
+  // 9. Subida y Optimización de Imágenes
+  uploadImage: async (imageBase64, filename) => {
+    try {
+      const res = await request('/upload-image', {
+        method: 'POST',
+        body: JSON.stringify({ imageBase64, filename })
+      });
+      return res;
+    } catch (err) {
+      // Fallback resiliente: Si el servidor Node aún no ha sido reiniciado (está en memoria antes de la ruta),
+      // utiliza directamente la dataUrl optimizada en base64 (que pesa ~40KB) para que nada se rompa.
+      console.warn("Aviso: /upload-image respondió con error (reiniciar el servidor con npm start cargará el endpoint en disco). Usando imagen base64 optimizada directamente.");
+      return {
+        url: imageBase64,
+        filename: filename || 'imagen.webp',
+        sizeKb: Math.round((imageBase64.length * 3 / 4) / 1024),
+        fallback: true
+      };
+    }
+  },
+
+  // 10. Progreso y Autoaprendizaje Adaptativo
+  getProgreso: async (unidadId, usuarioId) => {
+    const key = `singling_progreso_u${unidadId || 1}`;
+    try {
+      const params = new URLSearchParams();
+      if (unidadId) params.append('unidadId', unidadId);
+      if (usuarioId) params.append('usuarioId', usuarioId);
+      const res = await request(`/progreso?${params.toString()}`);
+      if (res && typeof res.aciertos === 'number') {
+        localStorage.setItem(key, JSON.stringify(res));
+        return res;
+      }
+    } catch (e) {
+      // Fallback a localStorage si el servidor aún no tiene la ruta activa
+    }
+    const local = localStorage.getItem(key);
+    if (local) {
+      try { return JSON.parse(local); } catch (_) {}
+    }
+    return {
+      unidadId: parseInt(unidadId || 1, 10),
+      aciertos: 0,
+      rachaActual: 0,
+      rachaMaxima: 0,
+      nivelActual: 1,
+      actividadesCompletadas: [],
+      porcentajeDominio: 0
+    };
+  },
+
+  registrarAcierto: async (data) => {
+    const uId = data.unidadId || 1;
+    const key = `singling_progreso_u${uId}`;
+    try {
+      const res = await request('/progreso/acierto', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      if (res && res.success) {
+        localStorage.setItem(key, JSON.stringify(res));
+        return res;
+      }
+    } catch (e) {
+      // Fallback local adaptativo
+    }
+
+    // Algoritmo local resiliente
+    let current = {
+      unidadId: uId,
+      aciertos: 0,
+      rachaActual: 0,
+      rachaMaxima: 0,
+      nivelActual: 1,
+      actividadesCompletadas: [],
+      porcentajeDominio: 0
+    };
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) current = { ...current, ...JSON.parse(raw) };
+    } catch (_) {}
+
+    const isCorrect = Boolean(data.esAcierto);
+    if (isCorrect) {
+      current.aciertos += 1;
+      current.rachaActual += 1;
+      if (current.rachaActual > current.rachaMaxima) current.rachaMaxima = current.rachaActual;
+    } else {
+      current.rachaActual = 0;
+    }
+
+    if (data.completada && data.tipoActividad && !current.actividadesCompletadas.includes(data.tipoActividad)) {
+      current.actividadesCompletadas.push(data.tipoActividad);
+    }
+
+    const prevLvl = current.nivelActual;
+    if (current.aciertos >= 15 || current.rachaActual >= 5) {
+      current.nivelActual = 3;
+    } else if (current.aciertos >= 5 || current.rachaActual >= 2) {
+      current.nivelActual = 2;
+    } else {
+      current.nivelActual = 1;
+    }
+
+    current.porcentajeDominio = Math.min(100, Math.round((current.aciertos / 20) * 100));
+    const nivelSubido = current.nivelActual > prevLvl;
+
+    localStorage.setItem(key, JSON.stringify(current));
+    return { ...current, success: true, nivelSubido };
+  }
 };
+
+// ==============================================================================
+// OPTIMIZADOR HD DE IMÁGENES CLIENT-SIDE (HTML5 Canvas + WebP/JPEG)
+// Reduce imágenes pesadas (ej: 4MB a ~40KB-70KB) manteniendo calidad HD nítida
+// ==============================================================================
+export function optimizeAndCompressImage(file, maxDimension = 1200, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('El archivo seleccionado no es una imagen válida.'));
+    }
+
+    const originalSizeKb = (file.size / 1024).toFixed(1);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Calcular escalado proporcional manteniendo aspecto sin distorsión
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        // Suavizado bicúbico de alta calidad para máxima nitidez HD
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Preferir WebP por su compresión superior y soporte moderno; fallback a JPEG
+        let mime = 'image/webp';
+        let dataUrl = canvas.toDataURL(mime, quality);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          mime = 'image/jpeg';
+          dataUrl = canvas.toDataURL(mime, quality);
+        }
+
+        // Calcular tamaño optimizado aproximado
+        const base64Length = dataUrl.length - (dataUrl.indexOf(',') + 1);
+        const optimizedSizeKb = ((base64Length * 0.75) / 1024).toFixed(1);
+        const reductionPct = Math.max(0, Math.round(((file.size - (base64Length * 0.75)) / file.size) * 100));
+
+        resolve({
+          dataUrl,
+          filename: file.name,
+          width,
+          height,
+          originalSizeKb: parseFloat(originalSizeKb),
+          optimizedSizeKb: parseFloat(optimizedSizeKb),
+          reductionPct,
+          mime
+        });
+      };
+      img.onerror = () => reject(new Error('No se pudo decodificar la imagen.'));
+      img.src = e.target.result;
+    };
+
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 // Helper para convertir links de Google Drive a URLs embebibles
 export function cleanDriveLink(url) {

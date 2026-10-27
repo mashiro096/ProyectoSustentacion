@@ -104,6 +104,28 @@ A diferencia de los prototipos iniciales que contenían bancos de preguntas est�
 
 ---
 
+## 🎮 4.1 Centro de Actividades Lúdicas Interactivas
+
+Además de la evaluación adaptativa general, el sistema integra **5 actividades didácticas gamificadas** sincronizadas en PostgreSQL (`actividades_unidad`) con síntesis de voz en inglés (*Text-to-Speech*) y animaciones dinámicas:
+
+1. 🧩 **Completar con Cuadros (`fill`)**:
+   - Ejercicios interactivos con imágenes descriptivas de apoyo.
+   - Mecanismo dual: **Drag & Drop** nativo (arrastrar y soltar) o **toque directo** (tap-to-place) con botón para deseleccionar palabras y retroalimentación inmediata.
+2. 🎴 **Memorama Educativo 3D (`memorama`)**:
+   - Tarjetas interactivas con efecto de giro tridimensional en CSS 3D (`rotateY(180deg)`).
+   - Emparejamiento de países con sus banderas, contador de movimientos, cronómetro en vivo y calificación de 1 a 3 estrellas.
+3. ✏️ **Crucigrama de Vocabulario (`crucigrama`)**:
+   - Cuadrícula responsiva con pistas horizontales (*Across*) y verticales (*Down*).
+   - Navegación automática por celdas, avance con teclado, tecla de retroceso inteligente, botón de pista (*Hint*) y validación de respuestas.
+4. 🔎 **Sopa de Letras (`sopa_letras`)**:
+   - Cuadrícula generada de letras ocultando vocabulario en horizontal, vertical y diagonal.
+   - Selección táctil y por arrastre, resaltado en colores pastel permanentes y lista de palabras con tachado automático.
+5. 🪢 **El Ahorcado (`ahorcado`)**:
+   - Clásico juego del ahorcado con muñeco animado vectorial dibujado progresivamente en SVG según los fallos.
+   - Pistas contextuales de geografía, 6 vidas con corazones animados, teclado virtual interactivo A-Z y soporte para teclado físico.
+
+---
+
 ## 🚀 5. Cómo Ejecutar el Proyecto con PostgreSQL
 
 ### Paso 1: Configurar Variables de Entorno (`.env`)

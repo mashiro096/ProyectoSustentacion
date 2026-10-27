@@ -143,41 +143,296 @@
             </div>
 
             <div class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-1">
+              <!-- Banner de Edición de Actividad Existente -->
+              <div id="editing-activity-banner" class="hidden p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl text-xs text-amber-900 flex items-center justify-between shadow-xs">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center text-sm font-bold shrink-0">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </div>
+                  <div>
+                    <span class="font-bold text-amber-900 text-xs block">Modo Edición Activado</span>
+                    <span class="text-[11px] text-amber-700">Editando actividad: <strong id="editing-activity-title" class="font-bold"></strong></span>
+                  </div>
+                </div>
+                <button type="button" onclick="window.cancelActivityEditing()" class="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                  <i class="fa-solid fa-xmark"></i> <span>Salir de Edición</span>
+                </button>
+              </div>
+
+              <!-- Selector de Modo de Actividad -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="space-y-1 flex-1">
                   <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Modo de Actividad</label>
-                  <select id="q-type" onchange="toggleQuestionType()" class="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-200 outline-none font-medium text-sm">
-                    <option value="multiple">🔘 Selección Múltiple</option>
-                    <option value="fill">🧩 Completar con Cuadros (Drag & Drop)</option>
+                  <select id="q-type" onchange="toggleQuestionType()" class="w-full px-4 py-3 rounded-xl border bg-gray-50 focus:ring-2 focus:ring-orange-200 outline-none font-bold text-sm text-gray-800 cursor-pointer">
+                    <option value="multiple">🔘 Selección Múltiple (Evaluación Oficial)</option>
+                    <option value="fill">🧩 Completar con Cuadros (Cuadros de Textos)</option>
+                    <option value="memorama">🎴 Memorama 3D (Memory Match)</option>
+                    <option value="crucigrama">✏️ Crucigrama Temático (Crossword)</option>
+                    <option value="sopa_letras">🔎 Sopa de Letras (Word Search)</option>
+                    <option value="ahorcado">🪢 El Ahorcado (Hangman Challenge)</option>
                   </select>
                 </div>
-                <div class="space-y-1">
-                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Imagen de Referencia (Opcional - Link o Ruta)</label>
-                  <input type="text" id="q-image" placeholder="Pega el link de la imagen o ruta (Ej: img/6unidad/unit1/canada.jpg)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                <div class="pt-5 shrink-0">
+                  <button type="button" onclick="window.clearCurrentFormFromScratch()" class="px-3.5 py-3 bg-slate-100 hover:bg-slate-200 text-gray-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs" title="Limpiar formulario para empezar desde cero">
+                    <i class="fa-solid fa-eraser text-amber-500"></i>
+                    <span>Empezar desde cero</span>
+                  </button>
                 </div>
               </div>
 
-              <div class="space-y-1">
-                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Enunciado o Frase</label>
-                <textarea id="q-text" placeholder="Ej: What’s the capital of Canada? / The [box] is red." class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm" rows="2"></textarea>
-                <p id="fill-hint" class="hidden text-[10px] text-orange-500 italic px-2 font-semibold">💡 Tip: Escribe <b>[box]</b> donde quieras que aparezca el cuadro vacío para completar.</p>
+              
+              <!-- Medidor de Autoaprendizaje y Dificultad Adaptativa -->
+              <div id="activity-level-config" class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-gradient-to-r from-sky-50/70 to-blue-50/70 border border-sky-200/80 rounded-2xl">
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-600 uppercase ml-1 flex items-center gap-1">
+                    <i class="fa-solid fa-layer-group text-[#2470BB]"></i>
+                    <span>Nivel Pedagógico *</span>
+                  </label>
+                  <select id="act-difficulty-level" class="w-full px-3 py-2.5 rounded-xl border bg-white font-bold text-xs text-gray-800 outline-none focus:ring-2 focus:ring-sky-200 cursor-pointer">
+                    <option value="1">🌱 Nivel 1: Fácil / Básico</option>
+                    <option value="2" selected>⚡ Nivel 2: Intermedio</option>
+                    <option value="3">🏆 Nivel 3: Avanzado / Desafío</option>
+                  </select>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-600 uppercase ml-1 flex items-center gap-1">
+                    <i class="fa-solid fa-lock text-amber-500"></i>
+                    <span>Aciertos para Desbloquear</span>
+                  </label>
+                  <input type="number" id="act-required-hits" min="0" max="50" value="0" placeholder="0 = Acceso libre" class="w-full px-3 py-2.5 rounded-xl border bg-white font-bold text-xs text-gray-800 outline-none focus:ring-2 focus:ring-sky-200" title="Aciertos requeridos por el alumno para desbloquear" />
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-600 uppercase ml-1 flex items-center gap-1">
+                    <i class="fa-solid fa-star text-yellow-500"></i>
+                    <span>Puntos Recompensa (XP)</span>
+                  </label>
+                  <input type="number" id="act-reward-points" min="5" max="100" value="15" class="w-full px-3 py-2.5 rounded-xl border bg-white font-bold text-xs text-gray-800 outline-none focus:ring-2 focus:ring-sky-200" />
+                </div>
               </div>
 
-              <div class="space-y-2">
-                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Opciones de Respuesta</label>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="options-container">
+              <!-- 1. FORMULARIO: SELECCIÓN MÚLTIPLE Y COMPLETAR CUADROS -->
+              <div id="form-mode-standard" class="space-y-4">
+                <!-- Banner explicativo para Completar con Cuadros -->
+                <div id="fill-written-banner" class="hidden p-4 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-2xl text-xs text-sky-900 space-y-1.5">
+                  <div class="flex items-center gap-2 font-bold text-sm text-[#2470BB]">
+                    <i class="fa-solid fa-shapes"></i>
+                    <span>Modo de Completar con Cuadros de Texto</span>
+                  </div>
+                  <p class="leading-relaxed">
+                    Escribe la oración usando <b>[box]</b> donde deba colocarse el cuadro de texto (Ej: <i>"Ottawa is the capital of [box]."</i>). El estudiante responderá seleccionando o arrastrando el cuadro de texto correcto.
+                  </p>
+                </div>
+
+                <!-- Imagen Opcional (Selección Múltiple) -->
+                <div id="q-image-container" class="space-y-1.5">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Imagen Ilustrativa (Opcional)</label>
+                  <div class="flex gap-2">
+                    <input type="text" id="q-image" placeholder="Ruta, link web o selecciona un archivo" class="flex-1 px-4 py-2.5 rounded-xl border bg-gray-50 outline-none text-xs">
+                    <label for="q-file-upload" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-gray-700 border rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition">
+                      <i class="fa-solid fa-image"></i>
+                      <span>Subir Imagen</span>
+                    </label>
+                    <input type="file" id="q-file-upload" accept="image/*" class="hidden" onchange="window.handleImageUpload(event, 'q-image', 'q-image-preview')">
+                  </div>
+                  <div id="q-image-preview" class="hidden"></div>
+                </div>
+
+                <!-- Enunciado -->
+                <div class="space-y-1">
+                  <label id="q-text-label" class="text-[10px] font-bold text-gray-400 uppercase ml-2">Enunciado o Pregunta *</label>
+                  <textarea id="q-text" placeholder="Ej: What’s the capital of Canada?" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm" rows="2"></textarea>
+                  <p id="fill-hint" class="hidden text-[10px] text-sky-600 italic px-2 font-semibold">💡 Tip: Escribe <b>[box]</b> donde deba aparecer el cuadro vacío.</p>
+                </div>
+
+                <!-- Respuesta Correcta -->
+                <div class="space-y-1">
+                  <label id="opt-label" class="text-[10px] font-bold text-gray-400 uppercase ml-2">Respuesta Correcta *</label>
                   <div class="relative">
-                    <input type="text" id="opt-1" placeholder="Opción CORRECTA *" class="w-full pl-10 pr-4 py-3 rounded-xl border border-green-200 bg-green-50 outline-none text-sm font-semibold">
+                    <input type="text" id="opt-correct" placeholder="Respuesta correcta..." class="w-full pl-10 pr-4 py-3 rounded-xl border border-green-200 bg-green-50 outline-none text-sm font-semibold">
                     <i class="fa-solid fa-check absolute left-4 top-4 text-green-500"></i>
                   </div>
-                  <input type="text" id="opt-2" placeholder="Opción incorrecta *" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
-                  <input type="text" id="opt-3" placeholder="Opción incorrecta (opcional)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
-                  <input type="text" id="opt-4" placeholder="Opción incorrecta (opcional)" class="w-full px-4 py-3 rounded-xl border bg-gray-50 outline-none text-sm">
+                </div>
+
+                <!-- Pista y traducción (solo para Completar Cuadros) -->
+                <div id="fill-extra-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Pista en Inglés (Opcional)</label>
+                    <input type="text" id="fill-hint-input" placeholder="Ej: Second largest country" class="w-full px-4 py-2.5 rounded-xl border bg-gray-50 text-xs">
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Traducción en Español (Opcional)</label>
+                    <input type="text" id="fill-trans-input" placeholder="Ej: Ottawa es la capital de Canadá" class="w-full px-4 py-2.5 rounded-xl border bg-gray-50 text-xs">
+                  </div>
+                </div>
+
+                <!-- Opciones Incorrectas Dinámicas (Solo Selección Múltiple) -->
+                <div id="options-distractors-wrapper" class="space-y-2">
+                  <div class="flex items-center justify-between ml-2">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Opciones Incorrectas (Añade o elimina cuantas desees)</label>
+                    <button type="button" onclick="window.addDistractorOption()" class="text-xs font-bold text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-lg border border-sky-200 transition flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-plus"></i> Añadir Opción
+                    </button>
+                  </div>
+                  <div id="distractors-list" class="space-y-2">
+                    <!-- Filas de distractores generadas dinámicamente -->
+                  </div>
                 </div>
               </div>
 
-              <button onclick="saveQuestion()" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 text-sm">
-                <i class="fa-solid fa-plus"></i> Añadir a la Unidad
+              <!-- 2. FORMULARIO: MEMORAMA 3D DINÁMICO -->
+              <div id="form-mode-memorama" class="space-y-4 hidden">
+                <div class="p-4 bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-200 rounded-2xl text-xs text-indigo-900 space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-bold text-sm text-indigo-700">
+                      <i class="fa-solid fa-clone"></i>
+                      <span>Memorama 3D</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button type="button" onclick="window.clearMemoramaFromScratch()" class="text-xs font-bold text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                        <i class="fa-solid fa-eraser text-amber-500"></i> Empezar desde cero
+                      </button>
+                      <button type="button" onclick="window.addMemoramaPairRow()" class="text-xs font-bold text-indigo-600 hover:bg-indigo-50 bg-white px-2.5 py-1.5 rounded-lg border border-indigo-200 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                        <i class="fa-solid fa-plus"></i> Añadir Par
+                      </button>
+                    </div>
+                  </div>
+                  <p class="leading-relaxed">
+                    Empareja palabras en inglés con imágenes. Puedes añadir todos los pares que desees o eliminar los que no necesites.
+                  </p>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Título del Memorama</label>
+                  <input type="text" id="memo-title" placeholder="Ej: Memorama de Países y Banderas" value="Memorama de Países y Banderas" class="w-full px-4 py-3 rounded-xl border bg-gray-50 text-sm font-bold">
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between ml-2">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Pares de Cartas (<span id="memo-pairs-count">0</span> pares)</label>
+                    <span class="text-[10px] text-gray-400">Palabra en inglés ↔ Imagen</span>
+                  </div>
+                  <div id="memo-pairs-list" class="space-y-2.5">
+                    <!-- Generado dinámicamente -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. FORMULARIO: CRUCIGRAMA DINÁMICO -->
+              <div id="form-mode-crucigrama" class="space-y-4 hidden">
+                <div class="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-bold text-sm text-amber-800">
+                      <i class="fa-solid fa-pen-ruler"></i>
+                      <span>Crucigrama Temático</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button type="button" onclick="window.clearCrucigramaFromScratch()" class="text-xs font-bold text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                        <i class="fa-solid fa-eraser text-amber-500"></i> Empezar desde cero
+                      </button>
+                      <button type="button" onclick="window.addCrucigramaWordRow()" class="text-xs font-bold text-amber-700 hover:bg-amber-100 bg-white px-2.5 py-1.5 rounded-lg border border-amber-300 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                        <i class="fa-solid fa-plus"></i> Añadir Palabra
+                      </button>
+                    </div>
+                  </div>
+                  <p class="leading-relaxed">
+                    Añade las palabras en inglés y sus pistas. Puedes agregar tantas palabras horizontales y verticales como quieras.
+                  </p>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Título del Crucigrama</label>
+                  <input type="text" id="cw-title" placeholder="Ej: Crucigrama de Países y Capitales" value="Crucigrama de Países y Capitales" class="w-full px-4 py-3 rounded-xl border bg-gray-50 text-sm font-bold">
+                </div>
+
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between ml-2">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Palabras y Pistas (<span id="cw-words-count">0</span> palabras)</label>
+                    <span class="text-[10px] text-gray-400">Horizontal (Across) / Vertical (Down)</span>
+                  </div>
+                  <div id="cw-words-list" class="space-y-2.5">
+                    <!-- Generado dinámicamente -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. FORMULARIO: SOPA DE LETRAS -->
+              <div id="form-mode-sopa" class="space-y-4 hidden">
+                <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-bold text-sm text-emerald-800">
+                      <i class="fa-solid fa-magnifying-glass"></i>
+                      <span>Sopa de Letras</span>
+                    </div>
+                    <button type="button" onclick="window.clearSopaFromScratch()" class="text-xs font-bold text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                      <i class="fa-solid fa-eraser text-amber-500"></i> Empezar desde cero
+                    </button>
+                  </div>
+                  <p class="leading-relaxed">
+                    Escribe o pega las palabras en inglés separadas por comas. El sistema genera la cuadrícula automáticamente.
+                  </p>
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Título de la Sopa de Letras</label>
+                  <input type="text" id="ws-title" placeholder="Ej: Sopa de Letras: Countries & Capitals" value="Sopa de Letras: Countries & Capitals" class="w-full px-4 py-3 rounded-xl border bg-gray-50 text-sm font-bold">
+                </div>
+
+                <div class="space-y-1">
+                  <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Palabras a Ocultar (Separadas por comas) *</label>
+                  <textarea id="ws-words" placeholder="Ej: CANADA, BRAZIL, ECUADOR, CHILE, SPAIN, JAPAN" class="w-full px-4 py-3 rounded-xl border bg-gray-50 text-sm font-bold uppercase tracking-wider" rows="3">CANADA, BRAZIL, ECUADOR, CHILE, SPAIN, JAPAN</textarea>
+                </div>
+              </div>
+
+              <!-- 5. FORMULARIO: EL AHORCADO DINÁMICO -->
+              <div id="form-mode-ahorcado" class="space-y-4 hidden">
+                <div class="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 space-y-2">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-bold text-sm text-rose-800">
+                      <i class="fa-solid fa-skull-crossbones"></i>
+                      <span>El Ahorcado (6 Vidas)</span>
+                    </div>
+                    <button type="button" onclick="window.clearAhorcadoFormFromScratch()" class="text-xs font-bold text-gray-600 hover:text-red-600 bg-white hover:bg-red-50 px-2.5 py-1.5 rounded-lg border border-gray-200 transition flex items-center gap-1 cursor-pointer shadow-2xs">
+                      <i class="fa-solid fa-eraser text-amber-500"></i> Empezar desde cero
+                    </button>
+                  </div>
+                  <p class="leading-relaxed">
+                    Añade palabras secretas en inglés con sus pistas temáticas. Los alumnos adivinan letra por letra.
+                  </p>
+                </div>
+
+                <div class="p-4 bg-gray-50 rounded-2xl border space-y-3">
+                  <h5 class="font-bold text-gray-700 text-xs uppercase">Añadir Palabra al Ahorcado:</h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" id="hang-word" placeholder="Palabra Secreta en Inglés *" class="w-full px-4 py-2.5 rounded-xl border bg-white font-black text-sm uppercase">
+                    <input type="text" id="hang-cat" placeholder="Categoría (Ej: Countries / Animals)" value="Countries" class="w-full px-4 py-2.5 rounded-xl border bg-white text-xs">
+                  </div>
+                  <textarea id="hang-hint" placeholder="Pista temática en inglés *" class="w-full px-4 py-2 rounded-xl border bg-white text-xs" rows="2"></textarea>
+                  <div class="flex gap-2">
+                    <input type="text" id="hang-img" placeholder="Imagen opcional (ruta o link)" class="flex-1 px-4 py-2 rounded-xl border bg-white text-xs">
+                    <label for="hang-file-upload" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-gray-700 border rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0 transition">
+                      <i class="fa-solid fa-image"></i>
+                      <span>Subir Imagen</span>
+                    </label>
+                    <input type="file" id="hang-file-upload" accept="image/*" class="hidden" onchange="window.handleImageUpload(event, 'hang-img', 'hang-img-preview')">
+                  </div>
+                  <div id="hang-img-preview" class="hidden"></div>
+                </div>
+
+                <!-- Lista de palabras del Ahorcado en esta unidad -->
+                <div class="space-y-2 pt-2 border-t">
+                  <div class="flex items-center justify-between ml-2">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Palabras Guardadas en el Ahorcado (<span id="hang-words-count">0</span>)</label>
+                    <button type="button" onclick="window.clearAllAhorcadoWords()" class="text-[11px] text-red-500 font-bold hover:underline cursor-pointer">Vaciar palabras</button>
+                  </div>
+                  <div id="hang-words-list" class="space-y-2 max-h-56 overflow-y-auto"></div>
+                </div>
+              </div>
+
+              <!-- Botón Dinámico de Guardar -->
+              <button id="btn-save-activity" onclick="saveQuestion()" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-98">
+                <i class="fa-solid fa-plus"></i> <span id="btn-save-text">Añadir a la Unidad</span>
               </button>
             </div>
           </div>
@@ -213,8 +468,31 @@
             </div>
           </div>
 
-          <div class="flex items-center justify-between px-2">
-            <h4 class="font-bold text-gray-700 text-sm">Desafíos Configurados</h4>
+          <!-- SECCIÓN: ACTIVIDADES LÚDICAS Y JUEGOS INTERACTIVOS EN POSTGRESQL -->
+          <div class="bg-white border border-emerald-100 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl shrink-0">
+                  <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-800 text-sm">Actividades Lúdicas Interactivas</h4>
+                  <p class="text-xs text-gray-400">Juegos educativos configurados para esta unidad en PostgreSQL.</p>
+                </div>
+              </div>
+              <a href="index.html" target="_blank" class="px-3.5 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-emerald-200 shrink-0">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                <span>Probar en Portal Estudiante</span>
+              </a>
+            </div>
+
+            <div id="unit-activities-admin-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div class="col-span-full text-center py-4 text-gray-400 text-xs">Cargando actividades desde PostgreSQL...</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between px-2 pt-2">
+            <h4 class="font-bold text-gray-700 text-sm">Banco de Preguntas para Evaluación</h4>
             <div class="flex items-center gap-2">
               <button onclick="seedOfficialQuestions()" class="text-xs font-semibold px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg transition border border-orange-200 flex items-center gap-1">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -257,10 +535,579 @@
 
   <!-- SCRIPT API REST Y LÓGICA DOCENTE CON POSTGRESQL -->
   <script type="module">
-    import { api, cleanDriveLink, initDbStatusBadge } from "./js/api.js";
+    import { api, cleanDriveLink, initDbStatusBadge, optimizeAndCompressImage } from "./js/api.js";
 
     // Inicializar badge visual de PostgreSQL
     initDbStatusBadge();
+
+    // Estado global de edición
+    let currentEditingActivityId = null;
+
+    // --- GESTOR DE SUBIDA DE IMÁGENES (SIN TEXTO TÉCNICO NI HD/WEBP) ---
+    window.handleImageUpload = async (event, targetInputId, previewContainerId) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const previewEl = document.getElementById(previewContainerId);
+      const inputEl = document.getElementById(targetInputId);
+
+      if (previewEl) {
+        previewEl.classList.remove('hidden');
+        previewEl.innerHTML = `
+          <div class="flex items-center gap-2 p-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-medium border border-slate-200 mt-1">
+            <i class="fa-solid fa-spinner fa-spin text-sky-500"></i>
+            <span>Subiendo imagen...</span>
+          </div>`;
+      }
+
+      try {
+        const optimized = await optimizeAndCompressImage(file, 1200, 0.85);
+        const res = await api.uploadImage(optimized.dataUrl, optimized.filename);
+
+        if (res && res.url) {
+          if (inputEl) inputEl.value = res.url;
+          if (previewEl) {
+            previewEl.innerHTML = `
+              <div class="relative group mt-1.5 p-2 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                  <img src="${res.url}" alt="Vista previa" class="w-10 h-10 object-cover rounded-lg border border-slate-100 shrink-0 shadow-xs" onerror="this.src='img/grado6.jpg'" />
+                  <div class="truncate">
+                    <span class="text-xs font-semibold text-gray-700 block truncate">${file.name || 'Imagen cargada'}</span>
+                    <p class="text-[10px] text-gray-400 font-mono truncate">${res.url}</p>
+                  </div>
+                </div>
+                <button type="button" onclick="window.clearUploadedImage('${targetInputId}', '${previewContainerId}')" class="text-gray-400 hover:text-red-500 p-1.5 transition text-xs shrink-0 cursor-pointer" title="Quitar imagen">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            `;
+          }
+        }
+      } catch (err) {
+        console.error('Error al subir imagen:', err);
+        alert('Error al procesar la imagen: ' + err.message);
+        if (previewEl) previewEl.classList.add('hidden');
+      } finally {
+        event.target.value = '';
+      }
+    };
+
+    window.clearUploadedImage = (targetInputId, previewContainerId) => {
+      const inputEl = document.getElementById(targetInputId);
+      const previewEl = document.getElementById(previewContainerId);
+      if (inputEl) inputEl.value = '';
+      if (previewEl) {
+        previewEl.innerHTML = '';
+        previewEl.classList.add('hidden');
+      }
+    };
+
+    // Subida de imagen para filas de pares de Memorama
+    window.handlePairImageUpload = async (event, fileInput) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const row = fileInput.closest('.memo-pair-row');
+      if (!row) return;
+
+      const imgInput = row.querySelector('.memo-img');
+      const previewContainer = row.querySelector('.pair-preview-container');
+
+      if (previewContainer) {
+        previewContainer.classList.remove('hidden');
+        previewContainer.innerHTML = `
+          <div class="flex items-center gap-1.5 p-1 text-[11px] text-sky-600 font-medium">
+            <i class="fa-solid fa-spinner fa-spin"></i> Subiendo imagen...
+          </div>`;
+      }
+
+      try {
+        const optimized = await optimizeAndCompressImage(file, 800, 0.85);
+        const res = await api.uploadImage(optimized.dataUrl, optimized.filename);
+        if (res && res.url) {
+          if (imgInput) imgInput.value = res.url;
+          if (previewContainer) {
+            previewContainer.innerHTML = `
+              <div class="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200 mt-1 inline-flex shadow-2xs">
+                <img src="${res.url}" class="w-8 h-8 object-cover rounded border preview-img" onerror="this.src='img/grado6.jpg'">
+                <span class="text-[10px] text-gray-500 font-mono truncate max-w-[130px]">${res.url}</span>
+                <button type="button" onclick="window.clearPairImg(this)" class="text-gray-400 hover:text-red-500 text-xs px-1 cursor-pointer" title="Quitar imagen">✕</button>
+              </div>`;
+          }
+        }
+      } catch (err) {
+        alert("Error al subir la imagen: " + err.message);
+        if (previewContainer) previewContainer.classList.add('hidden');
+      } finally {
+        event.target.value = '';
+      }
+    };
+
+    window.clearPairImg = (btn) => {
+      const row = btn.closest('.memo-pair-row');
+      if (!row) return;
+      const imgInput = row.querySelector('.memo-img');
+      const previewContainer = row.querySelector('.pair-preview-container');
+      if (imgInput) imgInput.value = '';
+      if (previewContainer) {
+        previewContainer.innerHTML = '';
+        previewContainer.classList.add('hidden');
+      }
+    };
+
+    window.updatePairImgPreview = (input) => {
+      const row = input.closest('.memo-pair-row');
+      if (!row) return;
+      const previewContainer = row.querySelector('.pair-preview-container');
+      const url = input.value.trim();
+
+      if (!url) {
+        if (previewContainer) {
+          previewContainer.innerHTML = '';
+          previewContainer.classList.add('hidden');
+        }
+        return;
+      }
+
+      // Validar que sea una ruta verosímil antes de intentar cargar para evitar errores 404 al teclear texto casual
+      const isPlausible = url.startsWith('http://') || 
+                          url.startsWith('https://') || 
+                          url.startsWith('data:image/') || 
+                          url.startsWith('img/') || 
+                          /\.(jpg|jpeg|png|webp|svg|gif|bmp)$/i.test(url);
+
+      if (!isPlausible) {
+        if (previewContainer) {
+          previewContainer.innerHTML = '';
+          previewContainer.classList.add('hidden');
+        }
+        return;
+      }
+
+      if (previewContainer) {
+        previewContainer.classList.remove('hidden');
+        previewContainer.innerHTML = `
+          <div class="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200 mt-1 inline-flex shadow-2xs">
+            <img src="${url}" class="w-8 h-8 object-cover rounded border preview-img" onerror="this.parentElement.style.display='none'">
+            <button type="button" onclick="window.clearPairImg(this)" class="text-gray-400 hover:text-red-500 text-xs px-1 cursor-pointer" title="Quitar imagen">✕</button>
+          </div>`;
+      }
+    };
+
+    // --- OPCIONES DINÁMICAS PARA SELECCIÓN MÚLTIPLE ---
+    window.addDistractorOption = (val = '') => {
+      const list = document.getElementById('distractors-list');
+      if (!list) return;
+      const count = list.children.length + 1;
+      const div = document.createElement('div');
+      div.className = 'distractor-row flex items-center gap-2';
+      div.innerHTML = `
+        <div class="relative flex-1">
+          <input type="text" class="distractor-input w-full pl-9 pr-4 py-2.5 rounded-xl border bg-gray-50 outline-none text-xs" placeholder="Opción incorrecta #${count}..." value="${(val || '').replace(/"/g, '&quot;')}">
+          <i class="fa-solid fa-xmark absolute left-3.5 top-3 text-red-400 text-xs"></i>
+        </div>
+        <button type="button" onclick="window.removeDistractorOption(this)" class="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition cursor-pointer border border-transparent hover:border-red-200" title="Eliminar opción">
+          <i class="fa-solid fa-trash-can text-xs"></i>
+        </button>
+      `;
+      list.appendChild(div);
+    };
+
+    window.removeDistractorOption = (btn) => {
+      const row = btn.closest('.distractor-row');
+      if (row) row.remove();
+    };
+
+    window.initDistractorOptions = (values = ['', '', '']) => {
+      const list = document.getElementById('distractors-list');
+      if (!list) return;
+      list.innerHTML = '';
+      values.forEach(v => window.addDistractorOption(v));
+    };
+
+    // --- PARES DINÁMICOS DE MEMORAMA ---
+    window.addMemoramaPairRow = (text = '', img = '') => {
+      const list = document.getElementById('memo-pairs-list');
+      if (!list) return;
+      const row = document.createElement('div');
+      row.className = 'memo-pair-row p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 relative group';
+      row.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-indigo-700 memo-pair-badge flex items-center gap-1.5">
+            <i class="fa-solid fa-clone text-[10px]"></i> Par de Cartas
+          </span>
+          <button type="button" onclick="window.removeMemoramaPairRow(this)" class="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-md hover:bg-red-50 transition flex items-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-trash-can"></i> <span>Eliminar</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="space-y-1">
+            <label class="text-[9px] font-bold text-gray-400 uppercase">Texto en Inglés *</label>
+            <input type="text" class="memo-txt w-full px-3 py-2 rounded-lg border bg-white text-xs font-semibold" placeholder="Ej: Canada" value="${(text || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="space-y-1">
+            <label class="text-[9px] font-bold text-gray-400 uppercase">Imagen de Pareja</label>
+            <div class="flex gap-1.5">
+              <input type="text" class="memo-img flex-1 px-3 py-2 rounded-lg border bg-white text-xs font-mono" placeholder="Ruta o link de imagen..." value="${(img || '').replace(/"/g, '&quot;')}" onchange="window.updatePairImgPreview(this)" onblur="window.updatePairImgPreview(this)">
+              <label class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-gray-700 border rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition" title="Subir imagen">
+                <i class="fa-solid fa-image"></i>
+                <input type="file" accept="image/*" class="hidden" onchange="window.handlePairImageUpload(event, this)">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="pair-preview-container ${img ? '' : 'hidden'}">
+          <div class="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-slate-200 mt-1 inline-flex shadow-2xs">
+            <img src="${img}" class="w-8 h-8 object-cover rounded border preview-img" onerror="this.src='img/grado6.jpg'">
+            <span class="text-[10px] text-gray-500 font-mono truncate max-w-[130px]">${img}</span>
+            <button type="button" onclick="window.clearPairImg(this)" class="text-gray-400 hover:text-red-500 text-xs px-1 cursor-pointer" title="Quitar imagen">✕</button>
+          </div>
+        </div>
+      `;
+      list.appendChild(row);
+      window.updateMemoramaPairsCount();
+    };
+
+    window.removeMemoramaPairRow = (btn) => {
+      const row = btn.closest('.memo-pair-row');
+      if (row) row.remove();
+      window.updateMemoramaPairsCount();
+    };
+
+    window.updateMemoramaPairsCount = () => {
+      const count = document.querySelectorAll('#memo-pairs-list .memo-pair-row').length;
+      const el = document.getElementById('memo-pairs-count');
+      if (el) el.innerText = count;
+    };
+
+    window.clearMemoramaFromScratch = () => {
+      const list = document.getElementById('memo-pairs-list');
+      if (list) list.innerHTML = '';
+      const titleInp = document.getElementById('memo-title');
+      if (titleInp) titleInp.value = '';
+      window.addMemoramaPairRow('', '');
+      window.updateMemoramaPairsCount();
+    };
+
+    window.initDefaultMemoramaPairs = () => {
+      const list = document.getElementById('memo-pairs-list');
+      if (!list || list.children.length > 0) return;
+      const defaults = [
+        { text: 'Canada', img: 'img/6unidad/unit1/canada.jpg' },
+        { text: 'Brazil', img: 'img/6unidad/unit1/brasil.jpg' },
+        { text: 'Ecuador', img: 'img/6unidad/unit1/mapamundi.jpg' },
+        { text: 'Chile', img: 'img/6unidad/unit1/comparar6.jpg' }
+      ];
+      defaults.forEach(p => window.addMemoramaPairRow(p.text, p.img));
+    };
+
+    // --- PALABRAS DINÁMICAS DE CRUCIGRAMA ---
+    window.addCrucigramaWordRow = (word = '', dir = 'across', clue = '') => {
+      const list = document.getElementById('cw-words-list');
+      if (!list) return;
+      const row = document.createElement('div');
+      row.className = 'cw-word-row p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 relative';
+      row.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-800 cw-word-badge flex items-center gap-1.5">
+            <i class="fa-solid fa-pen-ruler text-[10px]"></i> Palabra de Crucigrama
+          </span>
+          <button type="button" onclick="window.removeCrucigramaWordRow(this)" class="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-md hover:bg-red-50 transition flex items-center gap-1 cursor-pointer">
+            <i class="fa-solid fa-trash-can"></i> <span>Eliminar</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div class="space-y-1">
+            <label class="text-[9px] font-bold text-gray-400 uppercase">Palabra en Inglés *</label>
+            <input type="text" class="cw-word-input w-full px-3 py-2 rounded-lg border bg-white text-xs font-bold uppercase tracking-wider" placeholder="Ej: OTTAWA" value="${(word || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="space-y-1">
+            <label class="text-[9px] font-bold text-gray-400 uppercase">Orientación *</label>
+            <select class="cw-dir-select w-full px-3 py-2 rounded-lg border bg-white text-xs font-semibold cursor-pointer">
+              <option value="across" ${dir === 'across' ? 'selected' : ''}>Horizontal (Across ➡️)</option>
+              <option value="down" ${dir === 'down' ? 'selected' : ''}>Vertical (Down ⬇️)</option>
+            </select>
+          </div>
+          <div class="space-y-1 sm:col-span-1">
+            <label class="text-[9px] font-bold text-gray-400 uppercase">Pista para el Alumno *</label>
+            <input type="text" class="cw-clue-input w-full px-3 py-2 rounded-lg border bg-white text-xs" placeholder="Ej: Capital of Canada" value="${(clue || '').replace(/"/g, '&quot;')}">
+          </div>
+        </div>
+      `;
+      list.appendChild(row);
+      window.updateCrucigramaWordsCount();
+    };
+
+    window.removeCrucigramaWordRow = (btn) => {
+      const row = btn.closest('.cw-word-row');
+      if (row) row.remove();
+      window.updateCrucigramaWordsCount();
+    };
+
+    window.updateCrucigramaWordsCount = () => {
+      const count = document.querySelectorAll('#cw-words-list .cw-word-row').length;
+      const el = document.getElementById('cw-words-count');
+      if (el) el.innerText = count;
+    };
+
+    window.clearCrucigramaFromScratch = () => {
+      const list = document.getElementById('cw-words-list');
+      if (list) list.innerHTML = '';
+      const titleInp = document.getElementById('cw-title');
+      if (titleInp) titleInp.value = '';
+      window.addCrucigramaWordRow('', 'across', '');
+      window.updateCrucigramaWordsCount();
+    };
+
+    window.initDefaultCrucigramaWords = () => {
+      const list = document.getElementById('cw-words-list');
+      if (!list || list.children.length > 0) return;
+      const defaults = [
+        { word: 'OTTAWA', dir: 'across', clue: 'Capital of Canada' },
+        { word: 'BRASILIA', dir: 'down', clue: 'Capital of Brazil' },
+        { word: 'QUITO', dir: 'across', clue: 'Capital of Ecuador' }
+      ];
+      defaults.forEach(w => window.addCrucigramaWordRow(w.word, w.dir, w.clue));
+    };
+
+    // --- SOPA DE LETRAS ---
+    window.clearSopaFromScratch = () => {
+      const titleInp = document.getElementById('ws-title');
+      const wordsInp = document.getElementById('ws-words');
+      if (titleInp) titleInp.value = '';
+      if (wordsInp) wordsInp.value = '';
+    };
+
+    // --- GESTIÓN DE PALABRAS DE EL AHORCADO ---
+    window.loadAhorcadoWords = async () => {
+      if (!currentUnitId) return;
+      const listContainer = document.getElementById('hang-words-list');
+      const countEl = document.getElementById('hang-words-count');
+      if (!listContainer) return;
+      listContainer.innerHTML = '<div class="text-xs text-gray-400 p-2">Cargando palabras...</div>';
+
+      try {
+        const list = await api.getActividades(currentUnitId, 'ahorcado');
+        if (!list || list.length === 0) {
+          listContainer.innerHTML = '<div class="text-xs text-gray-400 p-2 italic">No hay palabras configuradas aún en el Ahorcado.</div>';
+          if (countEl) countEl.innerText = '0';
+          return;
+        }
+        const act = list[0];
+        const datos = typeof act.datos === 'string' ? JSON.parse(act.datos) : act.datos;
+        const lvlEl = document.getElementById('act-difficulty-level');
+        const reqEl = document.getElementById('act-required-hits');
+        const ptsEl = document.getElementById('act-reward-points');
+        if (lvlEl) lvlEl.value = act.nivelDificultad || act.nivel_dificultad || 1;
+        if (reqEl) reqEl.value = act.aciertosRequeridos ?? act.aciertos_requeridos ?? 0;
+        if (ptsEl) ptsEl.value = act.puntosRecompensa ?? act.puntos_recompensa ?? 10;
+        const palabras = datos.palabras || [];
+        if (countEl) countEl.innerText = palabras.length;
+
+        if (palabras.length === 0) {
+          listContainer.innerHTML = '<div class="text-xs text-gray-400 p-2 italic">No hay palabras configuradas aún.</div>';
+          return;
+        }
+
+        listContainer.innerHTML = palabras.map((p, idx) => `
+          <div class="p-2.5 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-2 shadow-2xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
+              <div class="truncate">
+                <span class="font-black text-xs text-gray-800 tracking-wider">${p.word}</span>
+                <span class="text-[10px] text-gray-400 block truncate">${p.category ? `[${p.category}] ` : ''}${p.hint}</span>
+              </div>
+            </div>
+            <button type="button" onclick="window.deleteAhorcadoWord(${idx})" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition text-xs shrink-0 cursor-pointer" title="Eliminar palabra">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `).join('');
+      } catch (err) {
+        listContainer.innerHTML = `<div class="text-xs text-red-500 p-2">Error al cargar palabras: ${err.message}</div>`;
+      }
+    };
+
+    window.deleteAhorcadoWord = async (idx) => {
+      if (!confirm("¿Deseas eliminar esta palabra del Ahorcado?")) return;
+      try {
+        const list = await api.getActividades(currentUnitId, 'ahorcado');
+        if (!list || list.length === 0) return;
+        const act = list[0];
+        const datos = typeof act.datos === 'string' ? JSON.parse(act.datos) : act.datos;
+        datos.palabras.splice(idx, 1);
+        await api.updateActividad(act.id, { datos });
+        window.loadAhorcadoWords();
+      } catch (err) {
+        alert("Error al eliminar palabra: " + err.message);
+      }
+    };
+
+    window.clearAllAhorcadoWords = async () => {
+      if (!confirm("¿Deseas vaciar todas las palabras del Ahorcado para empezar desde cero?")) return;
+      try {
+        const list = await api.getActividades(currentUnitId, 'ahorcado');
+        if (!list || list.length === 0) return;
+        const act = list[0];
+        const datos = typeof act.datos === 'string' ? JSON.parse(act.datos) : act.datos;
+        datos.palabras = [];
+        await api.updateActividad(act.id, { datos });
+        window.loadAhorcadoWords();
+      } catch (err) {
+        alert("Error al vaciar palabras: " + err.message);
+      }
+    };
+
+    window.clearAhorcadoFormFromScratch = () => {
+      const w = document.getElementById('hang-word');
+      const h = document.getElementById('hang-hint');
+      const img = document.getElementById('hang-img');
+      if (w) w.value = '';
+      if (h) h.value = '';
+      if (img) img.value = '';
+      window.clearUploadedImage('hang-img', 'hang-img-preview');
+    };
+
+    // --- REINICIAR CUALQUIER FORMULARIO DESDE CERO ---
+    window.clearCurrentFormFromScratch = () => {
+      const type = document.getElementById('q-type')?.value;
+      window.cancelActivityEditing();
+
+      if (type === 'multiple') {
+        const qText = document.getElementById('q-text');
+        const optCorr = document.getElementById('opt-correct');
+        const qImg = document.getElementById('q-image');
+        if (qText) qText.value = '';
+        if (optCorr) optCorr.value = '';
+        if (qImg) qImg.value = '';
+        window.clearUploadedImage('q-image', 'q-image-preview');
+        window.initDistractorOptions(['', '', '']);
+      } else if (type === 'fill') {
+        const qText = document.getElementById('q-text');
+        const optCorr = document.getElementById('opt-correct');
+        const hintInp = document.getElementById('fill-hint-input');
+        const transInp = document.getElementById('fill-trans-input');
+        if (qText) qText.value = '';
+        if (optCorr) optCorr.value = '';
+        if (hintInp) hintInp.value = '';
+        if (transInp) transInp.value = '';
+      } else if (type === 'memorama') {
+        window.clearMemoramaFromScratch();
+      } else if (type === 'crucigrama') {
+        window.clearCrucigramaFromScratch();
+      } else if (type === 'sopa_letras') {
+        window.clearSopaFromScratch();
+      } else if (type === 'ahorcado') {
+        window.clearAhorcadoFormFromScratch();
+      }
+    };
+
+    // --- EDICIÓN Y ELIMINACIÓN DE ACTIVIDADES DE LA UNIDAD ---
+    window.editActivity = async (id, tipo) => {
+      try {
+        const act = await api.getActividad(id);
+        if (!act) return alert("No se encontró la actividad.");
+
+        currentEditingActivityId = id;
+
+        // 1. Mostrar banner de edición
+        const banner = document.getElementById('editing-activity-banner');
+        const titleEl = document.getElementById('editing-activity-title');
+        if (banner) banner.classList.remove('hidden');
+        if (titleEl) titleEl.innerText = `${act.titulo}`;
+
+        // 2. Cambiar selector a este tipo y activar formulario
+        const typeSelect = document.getElementById('q-type');
+        if (typeSelect) {
+          typeSelect.value = tipo;
+          window.toggleQuestionType();
+        }
+
+        const datos = typeof act.datos === 'string' ? JSON.parse(act.datos) : act.datos;
+
+        // 3. Poblar formulario
+        if (tipo === 'memorama') {
+          const titleInp = document.getElementById('memo-title');
+          if (titleInp) titleInp.value = act.titulo || '';
+          const list = document.getElementById('memo-pairs-list');
+          if (list) list.innerHTML = '';
+          const pares = datos.pares || [];
+          if (pares.length === 0) {
+            window.addMemoramaPairRow('', '');
+          } else {
+            pares.forEach(p => window.addMemoramaPairRow(p.text, p.image));
+          }
+        } else if (tipo === 'crucigrama') {
+          const titleInp = document.getElementById('cw-title');
+          if (titleInp) titleInp.value = act.titulo || '';
+          const list = document.getElementById('cw-words-list');
+          if (list) list.innerHTML = '';
+          const words = datos.words || [];
+          if (words.length === 0) {
+            window.addCrucigramaWordRow('', 'across', '');
+          } else {
+            words.forEach(w => window.addCrucigramaWordRow(w.word, w.direction, w.clue));
+          }
+        } else if (tipo === 'sopa_letras') {
+          const titleInp = document.getElementById('ws-title');
+          if (titleInp) titleInp.value = act.titulo || '';
+          const wordsInp = document.getElementById('ws-words');
+          if (wordsInp) {
+            wordsInp.value = (datos.palabras || []).map(p => p.word).join(', ');
+          }
+        } else if (tipo === 'ahorcado') {
+          window.loadAhorcadoWords();
+        } else if (tipo === 'fill') {
+          if (datos.items && datos.items.length > 0) {
+            const first = datos.items[0];
+            const qText = document.getElementById('q-text');
+            const optCorr = document.getElementById('opt-correct');
+            const hintInp = document.getElementById('fill-hint-input');
+            const transInp = document.getElementById('fill-trans-input');
+            if (qText) qText.value = first.sentence || '';
+            if (optCorr) optCorr.value = first.correct || '';
+            if (hintInp) hintInp.value = first.hint || '';
+            if (transInp) transInp.value = first.translation || '';
+
+            if (first.options && first.options.length > 1) {
+              const distractors = first.options.filter(o => o.toLowerCase() !== (first.correct || '').toLowerCase());
+              window.initDistractorOptions(distractors);
+            }
+          }
+        }
+
+        // 4. Cambiar texto de guardar
+        const btnText = document.getElementById('btn-save-text');
+        if (btnText) btnText.innerText = `Guardar Cambios en "${act.titulo}"`;
+
+        // 5. Scroll suave al panel de formulario
+        document.getElementById('panel-actividades')?.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (err) {
+        alert("Error al cargar actividad para editar: " + err.message);
+      }
+    };
+
+    window.cancelActivityEditing = () => {
+      currentEditingActivityId = null;
+      const banner = document.getElementById('editing-activity-banner');
+      if (banner) banner.classList.add('hidden');
+      window.toggleQuestionType();
+    };
+
+    window.deleteActivity = async (id, titulo) => {
+      if (!confirm(`¿Estás seguro de que deseas eliminar permanentemente la actividad "${titulo}"?`)) return;
+      try {
+        await api.deleteActividad(id);
+        if (currentEditingActivityId === id) {
+          window.cancelActivityEditing();
+        }
+        alert(`Actividad "${titulo}" eliminada correctamente.`);
+        loadUnitActivities(currentUnitId);
+      } catch (err) {
+        alert("Error al eliminar actividad: " + err.message);
+      }
+    };
 
     const gradesData = [
       { id: "1", name: "1ero de Básica" }, { id: "2", name: "2do de Básica" },
@@ -273,7 +1120,10 @@
     let currentSubjectId = null;
     let currentUnitId = null;
 
-    window.onload = () => renderGrades();
+    window.onload = () => {
+      renderGrades();
+      window.initDistractorOptions(['', '', '']);
+    };
 
     function renderGrades() {
       const container = document.getElementById('grades-container');
@@ -295,8 +1145,92 @@
       switchView('view-content'); 
       loadResources(id); 
       loadQuestions(id);
+      loadUnitActivities(id);
       loadQuizLimitConfig(id);
+      window.cancelActivityEditing();
+      window.initDistractorOptions(['', '', '']);
+      window.initDefaultMemoramaPairs();
+      window.initDefaultCrucigramaWords();
+      window.loadAhorcadoWords();
     };
+
+    async function loadUnitActivities(unitId) {
+      const container = document.getElementById('unit-activities-admin-list');
+      if (!container) return;
+      container.innerHTML = '<div class="col-span-full text-center py-4 text-gray-400 text-xs">Cargando actividades desde PostgreSQL...</div>';
+
+      try {
+        const activities = await api.getActividades(unitId);
+        container.innerHTML = '';
+
+        if (!activities || activities.length === 0) {
+          container.innerHTML = `
+            <div class="col-span-full text-center py-4 text-gray-400 text-xs">
+              No hay actividades lúdicas registradas para esta unidad aún.
+            </div>`;
+          return;
+        }
+
+        const icons = {
+          fill: '🧩',
+          memorama: '🎴',
+          crucigrama: '✏️',
+          sopa_letras: '🔎',
+          ahorcado: '🪢'
+        };
+
+        const typeLabels = {
+          fill: 'Completar con Cuadros (Escrito)',
+          memorama: 'Memorama 3D',
+          crucigrama: 'Crucigrama Temático',
+          sopa_letras: 'Sopa de Letras',
+          ahorcado: 'El Ahorcado'
+        };
+
+        activities.forEach(act => {
+          const icon = icons[act.tipo] || '🎮';
+          const label = typeLabels[act.tipo] || act.tipo;
+          const cleanTitle = (act.titulo || '').replace(/'/g, "\\'");
+          container.innerHTML += `
+            <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-100/60 transition">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-xl shrink-0">${icon}</span>
+                <div class="min-w-0">
+                  <h5 class="font-bold text-gray-800 text-xs leading-snug truncate">${act.titulo}</h5>
+                  <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <span class="text-[10px] text-gray-400 font-semibold">${label}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-black ${
+                      (act.nivelDificultad || act.nivel_dificultad) === 3 
+                        ? 'bg-purple-100 text-purple-700' 
+                        : ((act.nivelDificultad || act.nivel_dificultad) === 2 
+                            ? 'bg-sky-100 text-[#2470BB]' 
+                            : 'bg-emerald-100 text-emerald-700')
+                    }">
+                      ${(act.nivelDificultad || act.nivel_dificultad) === 3 ? '🏆 Avanzado' : ((act.nivelDificultad || act.nivel_dificultad) === 2 ? '⚡ Intermedio' : '🌱 Fácil')}
+                    </span>
+                    ${(act.aciertosRequeridos || act.aciertos_requeridos) > 0 
+                      ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">🔒 Req: ${act.aciertosRequeridos || act.aciertos_requeridos} aciertos</span>` 
+                      : '<span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-bold">🔓 Libre</span>'
+                    }
+                    <span class="px-1.5 py-0.5 bg-yellow-50 text-yellow-700 rounded text-[9px] font-bold">⭐ ${act.puntosRecompensa || act.puntos_recompensa || 10} XP</span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="window.editActivity(${act.id}, '${act.tipo}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#2470BB] rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Editar actividad">
+                  <i class="fa-solid fa-pen"></i> <span class="hidden sm:inline">Editar</span>
+                </button>
+                <button type="button" onclick="window.deleteActivity(${act.id}, '${cleanTitle}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Eliminar actividad">
+                  <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Eliminar</span>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="col-span-full text-center py-4 text-red-500 text-xs">Error al cargar actividades: ${err.message}</div>`;
+      }
+    }
 
     async function loadQuizLimitConfig(unitId) {
       try {
@@ -350,12 +1284,73 @@
     window.toggleQuestionType = () => {
       const type = document.getElementById('q-type').value;
       const hint = document.getElementById('fill-hint');
+      const btnText = document.getElementById('btn-save-text');
+
+      const fStd = document.getElementById('form-mode-standard');
+      const fHang = document.getElementById('form-mode-ahorcado');
+      const fWs = document.getElementById('form-mode-sopa');
+      const fMemo = document.getElementById('form-mode-memorama');
+      const fCw = document.getElementById('form-mode-crucigrama');
+      const fLvlConfig = document.getElementById('activity-level-config');
+
+      const qImgContainer = document.getElementById('q-image-container');
+      const fillBanner = document.getElementById('fill-written-banner');
+      const optDistractors = document.getElementById('options-distractors-wrapper');
+      const optCorrect = document.getElementById('opt-correct');
+      const optLabel = document.getElementById('opt-label');
+      const fillExtra = document.getElementById('fill-extra-fields');
+
+      // Ocultar todos los subformularios
+      [fStd, fHang, fWs, fMemo, fCw].forEach(f => {
+        if (f) f.classList.add('hidden');
+      });
+
       if (hint) hint.classList.toggle('hidden', type !== 'fill');
+      if (fLvlConfig) fLvlConfig.classList.toggle('hidden', type === 'multiple');
+
+      if (type === 'multiple' || type === 'fill') {
+        if (fStd) fStd.classList.remove('hidden');
+
+        if (type === 'fill') {
+          // MODO COMPLETAR CON CUADROS DE TEXTOS
+          if (qImgContainer) qImgContainer.classList.add('hidden');
+          if (fillBanner) fillBanner.classList.remove('hidden');
+          if (optDistractors) optDistractors.classList.remove('hidden');
+          if (fillExtra) fillExtra.classList.remove('hidden');
+          if (optCorrect) optCorrect.placeholder = "Cuadro de texto CORRECTO (Ej: Canada) *";
+          if (optLabel) optLabel.innerText = "Cuadro de Texto Correcto *";
+          if (btnText) btnText.innerText = currentEditingActivityId ? 'Guardar Cambios en Reto con Cuadros' : 'Añadir Reto con Cuadros de Texto';
+        } else {
+          // MODO SELECCIÓN MÚLTIPLE (EVALUACIÓN OFICIAL)
+          if (qImgContainer) qImgContainer.classList.remove('hidden');
+          if (fillBanner) fillBanner.classList.add('hidden');
+          if (optDistractors) optDistractors.classList.remove('hidden');
+          if (fillExtra) fillExtra.classList.add('hidden');
+          if (optCorrect) optCorrect.placeholder = "Opción CORRECTA *";
+          if (optLabel) optLabel.innerText = "Opciones de Respuesta";
+          if (btnText) btnText.innerText = 'Añadir Pregunta a la Evaluación';
+        }
+      } else if (type === 'ahorcado') {
+        if (fHang) fHang.classList.remove('hidden');
+        if (btnText) btnText.innerText = 'Guardar Palabra en El Ahorcado';
+        window.loadAhorcadoWords();
+      } else if (type === 'sopa_letras') {
+        if (fWs) fWs.classList.remove('hidden');
+        if (btnText) btnText.innerText = currentEditingActivityId ? 'Guardar Cambios en Sopa de Letras' : 'Guardar Sopa de Letras';
+      } else if (type === 'memorama') {
+        if (fMemo) fMemo.classList.remove('hidden');
+        if (btnText) btnText.innerText = currentEditingActivityId ? 'Guardar Cambios en Memorama' : 'Guardar Memorama 3D';
+        window.initDefaultMemoramaPairs();
+      } else if (type === 'crucigrama') {
+        if (fCw) fCw.classList.remove('hidden');
+        if (btnText) btnText.innerText = currentEditingActivityId ? 'Guardar Cambios en Crucigrama' : 'Guardar Crucigrama';
+        window.initDefaultCrucigramaWords();
+      }
     };
 
     async function loadSubjects(gradeId) {
       const container = document.getElementById('subjects-grid');
-      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando materias desde MariaDB...</div>';
+      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando materias desde PostgreSQL...</div>';
 
       try {
         const list = await api.getMaterias(gradeId);
@@ -373,13 +1368,13 @@
         container.innerHTML += `<button onclick="openModal('modal-subject')" class="border-2 border-dashed border-blue-200 rounded-xl p-5 text-gray-500 hover:text-[#2470BB] hover:bg-blue-50/50 transition font-semibold"> + Añadir Materia </button>`;
       } catch (err) {
         console.error("Error al cargar materias:", err);
-        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar materias desde MariaDB.</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar materias desde PostgreSQL.</div>';
       }
     }
 
     async function loadUnits(subId) {
       const container = document.getElementById('units-grid');
-      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando unidades desde MariaDB...</div>';
+      container.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">Cargando unidades desde PostgreSQL...</div>';
 
       try {
         const list = await api.getUnidades(subId);
@@ -397,49 +1392,414 @@
         container.innerHTML += `<button onclick="openModal('modal-unit')" class="border-2 border-dashed border-sky-200 rounded-xl p-5 text-sky-500 hover:bg-sky-50/50 transition font-semibold"> + Crear Nueva Unidad </button>`;
       } catch (err) {
         console.error("Error al cargar unidades:", err);
-        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar unidades desde MariaDB.</div>';
+        container.innerHTML = '<div class="col-span-full text-center text-red-500 py-6">Error al cargar unidades desde PostgreSQL.</div>';
       }
     }
 
-    // --- LÓGICA DE ACTIVIDADES (RETO) ---
+    // --- LÓGICA DE ACTIVIDADES (RETO) DINÁMICA ---
+    
+    const getLevelMetrics = () => ({
+      nivelDificultad: parseInt(document.getElementById('act-difficulty-level')?.value || '1', 10),
+      aciertosRequeridos: parseInt(document.getElementById('act-required-hits')?.value || '0', 10),
+      puntosRecompensa: parseInt(document.getElementById('act-reward-points')?.value || '10', 10)
+    });
+
     window.saveQuestion = async () => {
+      if (!currentUnitId) return alert("Por favor selecciona una unidad primero.");
       const type = document.getElementById('q-type').value;
-      const text = document.getElementById('q-text').value.trim();
-      const imageRaw = document.getElementById('q-image').value.trim();
-      const opts = [
-        document.getElementById('opt-1').value.trim(),
-        document.getElementById('opt-2').value.trim(),
-        document.getElementById('opt-3').value.trim(),
-        document.getElementById('opt-4').value.trim()
-      ];
 
-      if(!text || !opts[0] || !opts[1]) return alert("Por favor completa los campos principales (enunciado y al menos 2 opciones).");
+      // =========================================================================
+      // CASO A: ACTUALIZANDO UNA ACTIVIDAD EXISTENTE
+      // =========================================================================
+      if (currentEditingActivityId) {
+        try {
+          if (type === 'memorama') {
+            const title = document.getElementById('memo-title').value.trim() || 'Memorama 3D';
+            const pairs = [];
+            document.querySelectorAll('#memo-pairs-list .memo-pair-row').forEach((row, idx) => {
+              const txt = row.querySelector('.memo-txt')?.value?.trim();
+              const img = row.querySelector('.memo-img')?.value?.trim();
+              if (txt) {
+                pairs.push({ id: idx + 1, text: txt, image: img || 'img/grado6.jpg' });
+              }
+            });
 
-      const cleanSentence = text.replace(/\[box\]/g, "______");
-      
-      try {
-        await api.createPregunta({
-          unidadId: currentUnitId,
-          tipo: type,
-          pregunta: cleanSentence,
-          imagen: cleanDriveLink(imageRaw),
-          opciones: opts.filter(o => o !== ""),
-          correcta: opts[0]
+            if (pairs.length < 2) return alert("Por favor configura al menos 2 pares de cartas para el Memorama.");
+
+            await api.updateActividad(currentEditingActivityId, {
+              titulo: title,
+              ...getLevelMetrics(),
+              datos: { tiempoLimiteSegundos: 120, pares }
+            });
+            alert("¡Memorama actualizado con éxito en PostgreSQL!");
+          } else if (type === 'crucigrama') {
+            const title = document.getElementById('cw-title').value.trim() || 'Crucigrama Temático';
+            const wordsList = [];
+            document.querySelectorAll('#cw-words-list .cw-word-row').forEach((row, idx) => {
+              const w = row.querySelector('.cw-word-input')?.value?.trim().toUpperCase();
+              const dir = row.querySelector('.cw-dir-select')?.value || 'across';
+              const clue = row.querySelector('.cw-clue-input')?.value?.trim();
+              if (w && clue) {
+                wordsList.push({
+                  number: idx + 1,
+                  direction: dir,
+                  word: w,
+                  clue: clue,
+                  row: idx === 0 ? 1 : (idx === 1 ? 1 : (idx + 1)),
+                  col: idx === 0 ? 1 : (idx === 1 ? 1 : 2)
+                });
+              }
+            });
+
+            if (wordsList.length < 2) return alert("Por favor ingresa al menos 2 palabras con sus pistas para el Crucigrama.");
+
+            await api.updateActividad(currentEditingActivityId, {
+              titulo: title,
+              ...getLevelMetrics(),
+              datos: { gridSize: { rows: 8, cols: 8 }, words: wordsList }
+            });
+            alert("¡Crucigrama actualizado con éxito en PostgreSQL!");
+          } else if (type === 'sopa_letras') {
+            const title = document.getElementById('ws-title').value.trim() || 'Sopa de Letras';
+            const rawWords = document.getElementById('ws-words').value.trim();
+            if (!rawWords) return alert("Por favor ingresa al menos 2 palabras separadas por comas.");
+
+            const wordList = rawWords.split(',').map(w => w.trim().toUpperCase()).filter(w => w.length > 1).map(w => ({ word: w, translation: w }));
+            if (wordList.length < 2) return alert("Por favor ingresa al menos 2 palabras válidas.");
+
+            await api.updateActividad(currentEditingActivityId, {
+              titulo: title,
+              ...getLevelMetrics(),
+              datos: { gridSize: 10, palabras: wordList }
+            });
+            alert("¡Sopa de Letras actualizada con éxito en PostgreSQL!");
+          } else if (type === 'fill') {
+            const text = document.getElementById('q-text').value.trim();
+            const correct = document.getElementById('opt-correct').value.trim();
+            const hint = document.getElementById('fill-hint-input')?.value?.trim() || `Palabra de ${correct.length} letras`;
+            const trans = document.getElementById('fill-trans-input')?.value?.trim() || '';
+
+            if (!text || !correct) return alert("Por favor completa el enunciado y la palabra correcta.");
+            const cleanSentence = text.includes('[box]') ? text : (text.includes('______') ? text.replace(/______/g, '[box]') : `${text} [box].`);
+
+            // Recolectar opciones / distractores configurados
+            const distractorInputs = document.querySelectorAll('#distractors-list .distractor-input');
+            const distractors = [];
+            distractorInputs.forEach(inp => {
+              const v = inp.value.trim();
+              if (v && v.toLowerCase() !== correct.toLowerCase()) distractors.push(v);
+            });
+            const allOptions = [correct, ...distractors];
+
+            await api.updateActividad(currentEditingActivityId, {
+              titulo: 'Completar con Cuadros',
+              descripcion: 'Lee la oración en inglés y coloca el cuadro de texto correcto.',
+              datos: {
+                instruccion: 'Read each sentence and select or drag the correct text box.',
+                items: [{
+                  id: Date.now(),
+                  sentence: cleanSentence,
+                  correct: correct,
+                  options: allOptions,
+                  hint: hint,
+                  translation: trans
+                }]
+              }
+            });
+            alert("¡Reto de cuadros actualizado con éxito en PostgreSQL!");
+          }
+
+          window.cancelActivityEditing();
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al actualizar la actividad: " + err.message);
+        }
+        return;
+      }
+
+      // =========================================================================
+      // CASO B: CREANDO NUEVA ACTIVIDAD O DESAFÍO DESDE CERO
+      // =========================================================================
+      if (type === 'fill') {
+        const text = document.getElementById('q-text').value.trim();
+        const correct = document.getElementById('opt-correct').value.trim();
+        const hint = document.getElementById('fill-hint-input')?.value?.trim() || `Palabra de ${correct.length} letras`;
+        const trans = document.getElementById('fill-trans-input')?.value?.trim() || '';
+
+        if (!text || !correct) return alert("Por favor completa el enunciado con [box] y el cuadro de texto correcto.");
+
+        const cleanSentence = text.includes('[box]') ? text : (text.includes('______') ? text.replace(/______/g, '[box]') : `${text} [box].`);
+
+        // Recolectar opciones / distractores configurados
+        const distractorInputs = document.querySelectorAll('#distractors-list .distractor-input');
+        const distractors = [];
+        distractorInputs.forEach(inp => {
+          const v = inp.value.trim();
+          if (v && v.toLowerCase() !== correct.toLowerCase()) distractors.push(v);
+        });
+        const allOptions = [correct, ...distractors];
+
+        try {
+          // 1. Guardar en preguntas oficiales de la unidad
+          await api.createPregunta({
+            unidadId: currentUnitId,
+            tipo: 'fill',
+            pregunta: cleanSentence,
+            imagen: '',
+            opciones: allOptions,
+            correcta: correct
+          });
+
+          // 2. Sincronizar en actividades_unidad
+          const list = await api.getActividades(currentUnitId, 'fill');
+          if (list && list.length > 0) {
+            const existing = list[0];
+            const currentDatos = typeof existing.datos === 'string' ? JSON.parse(existing.datos) : existing.datos;
+            const itemsList = currentDatos.items || [];
+            itemsList.push({
+              id: Date.now(),
+              sentence: cleanSentence,
+              correct: correct,
+              options: allOptions,
+              hint: hint,
+              translation: trans
+            });
+            currentDatos.items = itemsList;
+            await api.updateActividad(existing.id, { datos: currentDatos });
+          } else {
+            await api.createActividad({
+              unidadId: currentUnitId,
+              tipo: 'fill',
+              titulo: 'Completar con Cuadros',
+              descripcion: 'Lee la oración en inglés y coloca el cuadro de texto correcto.',
+              datos: {
+                instruccion: 'Read each sentence and select or drag the correct text box.',
+                items: [{
+                  id: Date.now(),
+                  sentence: cleanSentence,
+                  correct: correct,
+                  options: allOptions,
+                  hint: hint,
+                  translation: trans
+                }]
+              },
+              orden: 1
+            });
+          }
+
+          document.getElementById('q-text').value = '';
+          document.getElementById('opt-correct').value = '';
+          if (document.getElementById('fill-hint-input')) document.getElementById('fill-hint-input').value = '';
+          if (document.getElementById('fill-trans-input')) document.getElementById('fill-trans-input').value = '';
+          window.initDistractorOptions(['', '', '']);
+          alert("¡Reto de cuadros de texto añadido exitosamente a la unidad!");
+          loadQuestions(currentUnitId);
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar reto con cuadros: " + err.message);
+        }
+      } else if (type === 'multiple') {
+        const text = document.getElementById('q-text').value.trim();
+        const imageRaw = document.getElementById('q-image').value.trim();
+        const correct = document.getElementById('opt-correct').value.trim();
+
+        // Recolectar todas las opciones incorrectas dinámicas
+        const distractorInputs = document.querySelectorAll('#distractors-list .distractor-input');
+        const distractors = [];
+        distractorInputs.forEach(inp => {
+          const v = inp.value.trim();
+          if (v) distractors.push(v);
         });
 
-        document.getElementById('q-text').value = '';
-        document.getElementById('q-image').value = '';
-        [1,2,3,4].forEach(i => document.getElementById(`opt-${i}`).value = '');
-        alert("¡Desafío añadido con éxito a MariaDB!");
-        loadQuestions(currentUnitId);
-      } catch (err) {
-        alert("Error al guardar desafío en MariaDB: " + err.message);
+        if (!text || !correct) {
+          return alert("Por favor completa el enunciado y la respuesta correcta.");
+        }
+
+        if (distractors.length < 1) {
+          return alert("Por favor añade al menos 1 opción incorrecta (para un total de al menos 2 opciones).");
+        }
+
+        const allOptions = [correct, ...distractors];
+
+        try {
+          await api.createPregunta({
+            unidadId: currentUnitId,
+            tipo: 'multiple',
+            pregunta: text,
+            imagen: cleanDriveLink(imageRaw),
+            opciones: allOptions,
+            correcta: correct
+          });
+
+          document.getElementById('q-text').value = '';
+          document.getElementById('opt-correct').value = '';
+          document.getElementById('q-image').value = '';
+          window.clearUploadedImage('q-image', 'q-image-preview');
+          window.initDistractorOptions(['', '', '']);
+          alert("¡Pregunta guardada con éxito en PostgreSQL!");
+          loadQuestions(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar pregunta en PostgreSQL: " + err.message);
+        }
+      } else if (type === 'ahorcado') {
+        const word = document.getElementById('hang-word').value.trim().toUpperCase();
+        const cat = document.getElementById('hang-cat').value.trim() || 'General';
+        const hint = document.getElementById('hang-hint').value.trim();
+        const img = document.getElementById('hang-img').value.trim();
+
+        if (!word || !hint) return alert("Por favor ingresa la palabra secreta y su pista.");
+
+        try {
+          const list = await api.getActividades(currentUnitId, 'ahorcado');
+          if (list && list.length > 0) {
+            const existing = list[0];
+            const currentDatos = typeof existing.datos === 'string' ? JSON.parse(existing.datos) : existing.datos;
+            const wordsList = currentDatos.palabras || [];
+            wordsList.push({ word, category: cat, hint, image: img || undefined });
+            currentDatos.palabras = wordsList;
+
+            await api.updateActividad(existing.id, { datos: currentDatos });
+          } else {
+            await api.createActividad({
+              unidadId: currentUnitId,
+              tipo: 'ahorcado',
+              titulo: 'El Ahorcado (6 Vidas)',
+              descripcion: 'Adivina la palabra secreta en inglés letra por letra antes de agotar tus 6 vidas.',
+              datos: {
+                vidas: 6,
+                palabras: [{ word, category: cat, hint, image: img || undefined }]
+              },
+              orden: 5
+            });
+          }
+
+          document.getElementById('hang-word').value = '';
+          document.getElementById('hang-hint').value = '';
+          document.getElementById('hang-img').value = '';
+          window.clearUploadedImage('hang-img', 'hang-img-preview');
+          alert("¡Palabra añadida con éxito al Ahorcado en PostgreSQL!");
+          window.loadAhorcadoWords();
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar en el Ahorcado: " + err.message);
+        }
+      } else if (type === 'sopa_letras') {
+        const title = document.getElementById('ws-title').value.trim() || 'Sopa de Letras';
+        const rawWords = document.getElementById('ws-words').value.trim();
+        if (!rawWords) return alert("Por favor ingresa al menos 2 palabras separadas por comas.");
+
+        const wordList = rawWords.split(',').map(w => w.trim().toUpperCase()).filter(w => w.length > 1).map(w => ({ word: w, translation: w }));
+        if (wordList.length < 2) return alert("Por favor ingresa al menos 2 palabras válidas.");
+
+        try {
+          const list = await api.getActividades(currentUnitId, 'sopa_letras');
+          if (list && list.length > 0) {
+            await api.updateActividad(list[0].id, {
+              titulo: title,
+              datos: { gridSize: 10, palabras: wordList }
+            });
+          } else {
+            await api.createActividad({
+              unidadId: currentUnitId,
+              tipo: 'sopa_letras',
+              titulo: title,
+              descripcion: 'Busca las palabras clave ocultas en la cuadrícula de letras.',
+              datos: { gridSize: 10, palabras: wordList },
+              ...getLevelMetrics(),
+              orden: 4
+            });
+          }
+          alert("¡Sopa de letras guardada con éxito en PostgreSQL!");
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar sopa de letras: " + err.message);
+        }
+      } else if (type === 'memorama') {
+        const title = document.getElementById('memo-title').value.trim() || 'Memorama 3D';
+        const pairs = [];
+        document.querySelectorAll('#memo-pairs-list .memo-pair-row').forEach((row, idx) => {
+          const txt = row.querySelector('.memo-txt')?.value?.trim();
+          const img = row.querySelector('.memo-img')?.value?.trim();
+          if (txt) {
+            pairs.push({ id: idx + 1, text: txt, image: img || 'img/grado6.jpg' });
+          }
+        });
+
+        if (pairs.length < 2) return alert("Por favor configura al menos 2 pares de cartas para el Memorama.");
+
+        try {
+          const list = await api.getActividades(currentUnitId, 'memorama');
+          if (list && list.length > 0) {
+            await api.updateActividad(list[0].id, {
+              titulo: title,
+              datos: { tiempoLimiteSegundos: 120, pares: pairs }
+            });
+          } else {
+            await api.createActividad({
+              unidadId: currentUnitId,
+              tipo: 'memorama',
+              titulo: title,
+              descripcion: 'Encuentra las parejas volteando las cartas.',
+              datos: { tiempoLimiteSegundos: 120, pares: pairs },
+              ...getLevelMetrics(),
+              orden: 2
+            });
+          }
+          alert("¡Memorama guardado con éxito en PostgreSQL!");
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar memorama: " + err.message);
+        }
+      } else if (type === 'crucigrama') {
+        const title = document.getElementById('cw-title').value.trim() || 'Crucigrama Temático';
+        const wordsList = [];
+        document.querySelectorAll('#cw-words-list .cw-word-row').forEach((row, idx) => {
+          const w = row.querySelector('.cw-word-input')?.value?.trim().toUpperCase();
+          const dir = row.querySelector('.cw-dir-select')?.value || 'across';
+          const clue = row.querySelector('.cw-clue-input')?.value?.trim();
+          if (w && clue) {
+            wordsList.push({
+              number: idx + 1,
+              direction: dir,
+              word: w,
+              clue: clue,
+              row: idx === 0 ? 1 : (idx === 1 ? 1 : (idx + 1)),
+              col: idx === 0 ? 1 : (idx === 1 ? 1 : 2)
+            });
+          }
+        });
+
+        if (wordsList.length < 2) return alert("Por favor ingresa al menos 2 palabras con sus pistas para el Crucigrama.");
+
+        try {
+          const list = await api.getActividades(currentUnitId, 'crucigrama');
+          if (list && list.length > 0) {
+            await api.updateActividad(list[0].id, {
+              titulo: title,
+              datos: { gridSize: { rows: 8, cols: 8 }, words: wordsList }
+            });
+          } else {
+            await api.createActividad({
+              unidadId: currentUnitId,
+              tipo: 'crucigrama',
+              titulo: title,
+              descripcion: 'Completa las casillas verticales y horizontales leyendo las pistas.',
+              datos: { gridSize: { rows: 8, cols: 8 }, words: wordsList },
+              ...getLevelMetrics(),
+              orden: 3
+            });
+          }
+          alert("¡Crucigrama guardado con éxito en PostgreSQL!");
+          loadUnitActivities(currentUnitId);
+        } catch (err) {
+          alert("Error al guardar crucigrama: " + err.message);
+        }
       }
     };
 
     window.seedOfficialQuestions = async () => {
       if (!currentUnitId) return alert("Por favor selecciona una unidad primero.");
-      if (!confirm("¿Deseas guardar automáticamente las 9 preguntas sugeridas de práctica en esta unidad en MariaDB?")) return;
+      if (!confirm("¿Deseas guardar automáticamente las 9 preguntas sugeridas de práctica en esta unidad en PostgreSQL?")) return;
 
       const sampleBank = [
         { pregunta: "What’s the Capital of Canada?", imagen: "img/6unidad/unit1/mapamundi.jpg", tipo: "multiple", opciones: ["Ottawa", "Toronto", "Vancouver"], correcta: "Ottawa", categoria: 1 },
@@ -465,10 +1825,10 @@
             categoria: q.categoria
           });
         }
-        alert("¡9 preguntas cargadas automáticamente en MariaDB para esta unidad!");
+        alert("¡9 preguntas cargadas automáticamente en PostgreSQL para esta unidad!");
         loadQuestions(currentUnitId);
       } catch (err) {
-        alert("Error al cargar preguntas en MariaDB: " + err.message);
+        alert("Error al cargar preguntas en PostgreSQL: " + err.message);
       }
     };
 
@@ -485,7 +1845,7 @@
           list.innerHTML = `
             <div class="text-center p-8 bg-white rounded-2xl border text-gray-400">
               <p class="font-medium text-sm">No hay desafíos aún en esta unidad.</p>
-              <p class="text-xs text-gray-300 mt-1">Usa el formulario para añadir preguntas interactivas a MariaDB.</p>
+              <p class="text-xs text-gray-300 mt-1">Usa el formulario para añadir preguntas interactivas a PostgreSQL.</p>
             </div>`;
           badge.innerText = "0 Items";
           return;
@@ -520,7 +1880,7 @@
         badge.innerText = `${count} Desafíos`;
       } catch (err) {
         console.error("Error al cargar preguntas:", err);
-        list.innerHTML = '<div class="text-center p-6 text-red-500">Error al cargar preguntas desde MariaDB.</div>';
+        list.innerHTML = '<div class="text-center p-6 text-red-500">Error al cargar preguntas desde PostgreSQL.</div>';
       }
     }
 
@@ -535,10 +1895,10 @@
         await api.createRecurso(title, type, cleanDriveLink(rawUrl), currentUnitId);
         document.getElementById('res-title').value = ''; 
         document.getElementById('res-url').value = '';
-        alert("Material guardado exitosamente en MariaDB");
+        alert("Material guardado exitosamente en PostgreSQL");
         loadResources(currentUnitId);
       } catch (err) {
-        alert("Error al guardar material en MariaDB: " + err.message);
+        alert("Error al guardar material en PostgreSQL: " + err.message);
       }
     };
 
@@ -551,7 +1911,7 @@
         list.innerHTML = '';
         
         if (!recursos || recursos.length === 0) {
-          list.innerHTML = `<div class="p-6 bg-white rounded-xl border text-center text-gray-400 text-sm">No hay recursos subidos aún para esta unidad en MariaDB.</div>`;
+          list.innerHTML = `<div class="p-6 bg-white rounded-xl border text-center text-gray-400 text-sm">No hay recursos subidos aún para esta unidad en PostgreSQL.</div>`;
           return;
         }
 
@@ -572,13 +1932,13 @@
         });
       } catch (err) {
         console.error("Error al cargar recursos:", err);
-        list.innerHTML = '<div class="p-6 text-center text-red-500 text-sm">Error al cargar recursos desde MariaDB.</div>';
+        list.innerHTML = '<div class="p-6 text-center text-red-500 text-sm">Error al cargar recursos desde PostgreSQL.</div>';
       }
     }
 
     // UTILIDADES CRUD
     window.deleteItem = async (col, id) => { 
-      if (!confirm("¿Estás seguro de eliminar este elemento de MariaDB?")) return;
+      if (!confirm("¿Estás seguro de eliminar este elemento de PostgreSQL?")) return;
       try {
         if (col === 'materias') {
           await api.deleteMateria(id);
@@ -594,7 +1954,7 @@
           loadQuestions(currentUnitId);
         }
       } catch (err) {
-        alert("Error al eliminar elemento de MariaDB: " + err.message);
+        alert("Error al eliminar elemento de PostgreSQL: " + err.message);
       }
     };
 
@@ -622,7 +1982,7 @@
         document.getElementById('input-subject-name').value = '';
         loadSubjects(currentGradeId);
       } catch (err) {
-        alert("Error al crear materia en MariaDB: " + err.message);
+        alert("Error al crear materia en PostgreSQL: " + err.message);
       }
     };
 
@@ -635,7 +1995,7 @@
         document.getElementById('input-unit-name').value = '';
         loadUnits(currentSubjectId);
       } catch (err) {
-        alert("Error al crear unidad en MariaDB: " + err.message);
+        alert("Error al crear unidad en PostgreSQL: " + err.message);
       }
     };
   </script>
