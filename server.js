@@ -8,6 +8,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { pool, query, testConnection, dbConfig } from './db.js';
 
 // Cargar variables de entorno
@@ -19,13 +20,61 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
+// Middlewares con límite ampliado para imágenes HD optimizadas
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // Servir archivos estáticos del frontend (HTML, CSS, JS, Imágenes)
 app.use(express.static(__dirname));
+
+// ==============================================================================
+// GESTOR DE SUBIDA Y ALMACENAMIENTO DE IMÁGENES HD OPTIMIZADAS
+// ==============================================================================
+app.post('/api/upload-image', (req, res) => {
+  try {
+    const { imageBase64, filename } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'No se envió la imagen' });
+    }
+
+    const matches = imageBase64.match(/^data:image\/([a-zA-Z0-9-+]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Formato de imagen inválido o corrupto' });
+    }
+
+    const extRaw = matches[1].toLowerCase();
+    const ext = extRaw === 'jpeg' ? 'jpg' : (extRaw === 'svg+xml' ? 'svg' : extRaw);
+    const buffer = Buffer.from(matches[2], 'base64');
+
+    const uploadsDir = path.join(__dirname, 'img', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const cleanBase = (filename || 'img')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .substring(0, 30);
+    const finalFilename = `${Date.now()}_${cleanBase}.${ext}`;
+    const targetPath = path.join(uploadsDir, finalFilename);
+
+    fs.writeFileSync(targetPath, buffer);
+
+    const relativeUrl = `img/uploads/${finalFilename}`;
+    const sizeKb = (buffer.length / 1024).toFixed(1);
+
+    res.json({
+      success: true,
+      url: relativeUrl,
+      filename: finalFilename,
+      sizeKb: parseFloat(sizeKb),
+      message: 'Imagen HD optimizada y guardada exitosamente'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error al procesar subida de imagen', details: err.message });
+  }
+});
 
 // ==============================================================================
 // GESTOR DE CONFIGURACIÓN DEL SISTEMA (Límite de Preguntas Aleatorias)
@@ -98,6 +147,7 @@ app.get('/api/status', async (req, res) => {
     const recursos = await query('SELECT COUNT(*) AS total FROM recursos');
     const preguntas = await query('SELECT COUNT(*) AS total FROM preguntas');
     const intentos = await query('SELECT COUNT(*) AS total FROM intentos_evaluacion');
+    const actividades = await query('SELECT COUNT(*) AS total FROM actividades_unidad').catch(() => [{ total: 0 }]);
 
     res.json({
       ...result,
@@ -107,7 +157,8 @@ app.get('/api/status', async (req, res) => {
         unidades: unidades[0]?.total || 0,
         recursos: recursos[0]?.total || 0,
         preguntas: preguntas[0]?.total || 0,
-        intentos: intentos[0]?.total || 0
+        intentos: intentos[0]?.total || 0,
+        actividades: actividades[0]?.total || 0
       }
     });
   } catch (err) {
@@ -474,6 +525,281 @@ app.delete('/api/preguntas/:id', async (req, res) => {
     res.json({ message: 'Pregunta eliminada exitosamente' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar pregunta', details: error.message });
+  }
+});
+
+// ==============================================================================
+// 7. ACTIVIDADES INTERACTIVAS (Memorama, Crucigrama, Sopa de Letras, Ahorcado, Fill)
+// ==============================================================================
+app.get('/api/actividades', async (req, res) => {
+  try {
+    const { unidadId, tipo } = req.query;
+    let sql = 'SELECT id, unidad_id AS "unidadId", tipo, titulo, descripcion, datos, COALESCE(nivel_dificultad, 1) AS "nivelDificultad", COALESCE(aciertos_requeridos, 0) AS "aciertosRequeridos", COALESCE(puntos_recompensa, 10) AS "puntosRecompensa", activo, orden, created_at FROM actividades_unidad WHERE 1=1';
+    const params = [];
+
+    if (unidadId) {
+      sql += ' AND unidad_id = ?';
+      params.push(parseInt(unidadId, 10));
+    }
+    if (tipo) {
+      sql += ' AND tipo = ?';
+      params.push(tipo);
+    }
+
+    sql += ' ORDER BY orden ASC, id ASC';
+    const rows = await query(sql, params);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar actividades', details: error.message });
+  }
+});
+
+app.get('/api/actividades/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const rows = await query(
+      'SELECT id, unidad_id AS "unidadId", tipo, titulo, descripcion, datos, COALESCE(nivel_dificultad, 1) AS "nivelDificultad", COALESCE(aciertos_requeridos, 0) AS "aciertosRequeridos", COALESCE(puntos_recompensa, 10) AS "puntosRecompensa", activo, orden, created_at FROM actividades_unidad WHERE id = ?',
+      [parseInt(id, 10)]
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Actividad no encontrada' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar actividad', details: error.message });
+  }
+});
+
+app.post('/api/actividades', async (req, res) => {
+  try {
+    const { unidadId, tipo, titulo, descripcion, datos, orden, nivelDificultad, aciertosRequeridos, puntosRecompensa } = req.body;
+    if (!unidadId || !tipo || !titulo || !datos) {
+      return res.status(400).json({ error: 'unidadId, tipo, titulo y datos son requeridos' });
+    }
+
+    const validTypes = ['fill', 'memorama', 'crucigrama', 'sopa_letras', 'ahorcado', 'multiple'];
+    if (!validTypes.includes(tipo)) {
+      return res.status(400).json({ error: `Tipo inválido. Debe ser uno de: ${validTypes.join(', ')}` });
+    }
+
+    const jsonDatos = typeof datos === 'string' ? datos : JSON.stringify(datos);
+    const ord = orden ? parseInt(orden, 10) : 1;
+    const lvl = nivelDificultad ? parseInt(nivelDificultad, 10) : 1;
+    const reqHits = aciertosRequeridos !== undefined ? parseInt(aciertosRequeridos, 10) : 0;
+    const pts = puntosRecompensa !== undefined ? parseInt(puntosRecompensa, 10) : 10;
+
+    const result = await query(
+      `INSERT INTO actividades_unidad (unidad_id, tipo, titulo, descripcion, datos, orden, nivel_dificultad, aciertos_requeridos, puntos_recompensa)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      [parseInt(unidadId, 10), tipo, titulo.trim(), descripcion || null, jsonDatos, ord, lvl, reqHits, pts]
+    );
+
+    res.status(201).json({
+      id: result.insertId,
+      unidadId,
+      tipo,
+      titulo,
+      message: 'Actividad creada exitosamente en PostgreSQL'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al crear actividad', details: error.message });
+  }
+});
+
+app.put('/api/actividades/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titulo, descripcion, datos, activo, orden } = req.body;
+
+    const fields = [];
+    const params = [];
+
+    if (titulo !== undefined) {
+      fields.push('titulo = ?');
+      params.push(titulo.trim());
+    }
+    if (descripcion !== undefined) {
+      fields.push('descripcion = ?');
+      params.push(descripcion);
+    }
+    if (datos !== undefined) {
+      fields.push('datos = ?');
+      params.push(typeof datos === 'string' ? datos : JSON.stringify(datos));
+    }
+    if (activo !== undefined) {
+      fields.push('activo = ?');
+      params.push(Boolean(activo));
+    }
+    if (orden !== undefined) {
+      fields.push('orden = ?');
+      params.push(parseInt(orden, 10));
+    }
+    if (req.body.nivelDificultad !== undefined || req.body.nivel_dificultad !== undefined) {
+      fields.push('nivel_dificultad = ?');
+      params.push(parseInt(req.body.nivelDificultad ?? req.body.nivel_dificultad, 10));
+    }
+    if (req.body.aciertosRequeridos !== undefined || req.body.aciertos_requeridos !== undefined) {
+      fields.push('aciertos_requeridos = ?');
+      params.push(parseInt(req.body.aciertosRequeridos ?? req.body.aciertos_requeridos, 10));
+    }
+    if (req.body.puntosRecompensa !== undefined || req.body.puntos_recompensa !== undefined) {
+      fields.push('puntos_recompensa = ?');
+      params.push(parseInt(req.body.puntosRecompensa ?? req.body.puntos_recompensa, 10));
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No se enviaron campos para actualizar' });
+    }
+
+    params.push(parseInt(id, 10));
+    await query(`UPDATE actividades_unidad SET ${fields.join(', ')} WHERE id = ?`, params);
+
+    res.json({ id, message: 'Actividad actualizada exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar actividad', details: error.message });
+  }
+});
+
+app.delete('/api/actividades/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await query('DELETE FROM actividades_unidad WHERE id = ?', [parseInt(id, 10)]);
+    res.json({ message: 'Actividad eliminada exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al eliminar actividad', details: error.message });
+  }
+});
+
+
+// ==============================================================================
+// 7.1 SISTEMA DE AUTOAPRENDIZAJE Y PROGRESO POR ACIERTOS
+// ==============================================================================
+app.get('/api/progreso', async (req, res) => {
+  try {
+    const { unidadId, usuarioId } = req.query;
+    if (!unidadId) {
+      return res.status(400).json({ error: 'unidadId es requerido' });
+    }
+    const uId = parseInt(unidadId, 10);
+    const userFilter = usuarioId ? parseInt(usuarioId, 10) : null;
+
+    let rows;
+    if (userFilter) {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id = ? LIMIT 1', [uId, userFilter]);
+    } else {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id IS NULL LIMIT 1', [uId]);
+    }
+
+    if (!rows || rows.length === 0) {
+      return res.json({
+        unidadId: uId,
+        aciertos: 0,
+        rachaActual: 0,
+        rachaMaxima: 0,
+        nivelActual: 1,
+        actividadesCompletadas: [],
+        porcentajeDominio: 0
+      });
+    }
+
+    const p = rows[0];
+    const rawCompleted = p.actividades_completadas;
+    const completedList = typeof rawCompleted === 'string' ? JSON.parse(rawCompleted) : (rawCompleted || []);
+
+    res.json({
+      id: p.id,
+      unidadId: p.unidad_id,
+      aciertos: p.aciertos || 0,
+      rachaActual: p.racha_actual || 0,
+      rachaMaxima: p.racha_maxima || 0,
+      nivelActual: p.nivel_actual || 1,
+      actividadesCompletadas: completedList,
+      porcentajeDominio: Math.min(100, Math.round(((p.aciertos || 0) / 20) * 100))
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al consultar progreso', details: error.message });
+  }
+});
+
+app.post('/api/progreso/acierto', async (req, res) => {
+  try {
+    const { unidadId, usuarioId, tipoActividad, esAcierto, puntos, completada } = req.body;
+    if (!unidadId) {
+      return res.status(400).json({ error: 'unidadId es requerido' });
+    }
+    const uId = parseInt(unidadId, 10);
+    const userFilter = usuarioId ? parseInt(usuarioId, 10) : null;
+    const isCorrect = Boolean(esAcierto);
+
+    let rows;
+    if (userFilter) {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id = ? LIMIT 1', [uId, userFilter]);
+    } else {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id IS NULL LIMIT 1', [uId]);
+    }
+
+    let p = rows && rows.length > 0 ? rows[0] : null;
+    let currentAciertos = p ? (p.aciertos || 0) : 0;
+    let currentRacha = p ? (p.racha_actual || 0) : 0;
+    let currentRachaMax = p ? (p.racha_maxima || 0) : 0;
+    let prevNivel = p ? (p.nivel_actual || 1) : 1;
+    let rawCompleted = p ? p.actividades_completadas : [];
+    let completedList = typeof rawCompleted === 'string' ? JSON.parse(rawCompleted) : (rawCompleted || []);
+
+    if (isCorrect) {
+      currentAciertos += 1;
+      currentRacha += 1;
+      if (currentRacha > currentRachaMax) currentRachaMax = currentRacha;
+    } else {
+      currentRacha = 0;
+    }
+
+    if (completada && tipoActividad && !completedList.includes(tipoActividad)) {
+      completedList.push(tipoActividad);
+    }
+
+    // Algoritmo pedagógico adaptativo:
+    // Nivel 1: Principiante (0-4 aciertos)
+    // Nivel 2: Intermedio (5-14 aciertos o racha >= 3)
+    // Nivel 3: Avanzado (15+ aciertos o racha >= 6)
+    let newNivel = 1;
+    if (currentAciertos >= 15 || currentRacha >= 6) {
+      newNivel = 3;
+    } else if (currentAciertos >= 5 || currentRacha >= 3) {
+      newNivel = 2;
+    }
+
+    const nivelSubido = newNivel > prevNivel;
+    const jsonCompleted = JSON.stringify(completedList);
+
+    if (p) {
+      await query(
+        `UPDATE progreso_estudiante 
+         SET aciertos = ?, racha_actual = ?, racha_maxima = ?, nivel_actual = ?, actividades_completadas = ?::jsonb, updated_at = NOW() 
+         WHERE id = ?`,
+        [currentAciertos, currentRacha, currentRachaMax, newNivel, jsonCompleted, p.id]
+      );
+    } else {
+      await query(
+        `INSERT INTO progreso_estudiante (usuario_id, unidad_id, aciertos, racha_actual, racha_maxima, nivel_actual, actividades_completadas) 
+         VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)`,
+        [userFilter, uId, currentAciertos, currentRacha, currentRachaMax, newNivel, jsonCompleted]
+      );
+    }
+
+    res.json({
+      success: true,
+      unidadId: uId,
+      aciertos: currentAciertos,
+      rachaActual: currentRacha,
+      rachaMaxima: currentRachaMax,
+      nivelActual: newNivel,
+      nivelSubido,
+      actividadesCompletadas: completedList,
+      porcentajeDominio: Math.min(100, Math.round((currentAciertos / 20) * 100))
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al registrar progreso', details: error.message });
   }
 });
 

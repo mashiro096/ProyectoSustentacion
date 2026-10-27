@@ -7,9 +7,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .brand-font { font-family: 'Libre Caslon Text', serif; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
   </style>
 </head>
 
@@ -243,9 +255,80 @@
     </div>
   </div>
 
+  <!-- ==================== PANTALLA DE ACTIVIDAD LÚDICA (MEMORAMA, CRUCIGRAMA, SOPA, AHORCADO, CUADROS) ==================== -->
+  <div id="activity-modal-screen" class="absolute inset-0 bg-slate-50 hidden opacity-0 transition-opacity duration-500 z-50 flex flex-col overflow-y-auto">
+    <header class="bg-white border-b px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button onclick="closeActivityScreen()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-gray-600 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-arrow-left text-xs sm:text-sm"></i>
+        </button>
+        <div>
+          <h2 id="activity-screen-title" class="text-sm sm:text-base font-bold text-gray-800 truncate max-w-[130px] sm:max-w-xs">Actividad</h2>
+          <p id="activity-screen-subtitle" class="text-[10px] sm:text-xs text-gray-400 truncate max-w-[130px] sm:max-w-xs">Unit 1: Countries</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Racha y Aciertos en vivo durante la actividad -->
+        <div id="activity-live-streak" class="flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-xl text-[11px] sm:text-xs font-bold border border-amber-200 shadow-2xs">
+          <span>🔥</span> <span id="activity-live-streak-count">0</span>
+        </div>
+        <span id="activity-screen-tag" class="hidden md:inline-block px-2.5 py-1 bg-sky-50 text-[#2470BB] rounded-xl text-xs font-bold border border-sky-100">
+          🎮 Reto Interactivo
+        </span>
+        <button onclick="closeActivityScreen()" class="px-2.5 sm:px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+          <span class="hidden sm:inline">Cerrar</span>
+        </button>
+      </div>
+    </header>
+
+    <div id="activity-game-body" class="flex-1 p-4 md:p-6 max-w-4xl mx-auto w-full"></div>
+  </div>
+
+  
+  <!-- ==================== MODAL DE FELICITACIONES / SUBIDA DE NIVEL ==================== -->
+  <div id="modal-level-up" class="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border text-center space-y-5 animate-fadeIn relative overflow-hidden">
+      <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-400 to-amber-200 text-amber-900 flex items-center justify-center text-4xl shadow-lg ring-8 ring-amber-100 animate-bounce">
+        🏆
+      </div>
+      <div>
+        <span class="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+          ¡Nivel Desbloqueado!
+        </span>
+        <h3 id="levelup-title" class="text-2xl sm:text-3xl font-black text-gray-800 mt-2">¡Subiste de Nivel!</h3>
+        <p id="levelup-desc" class="text-xs sm:text-sm text-gray-500 mt-1.5 leading-relaxed">
+          Has demostrado un gran dominio respondiendo acertadamente. Nuevas actividades se han desbloqueado.
+        </p>
+      </div>
+
+      <!-- Badge de nuevo nivel -->
+      <div id="levelup-badge-box" class="p-4 rounded-2xl bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100 flex items-center justify-center gap-3">
+        <span id="levelup-badge-icon" class="text-3xl">⚡</span>
+        <div class="text-left">
+          <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Tu nuevo nivel pedagógico:</span>
+          <span id="levelup-badge-name" class="font-black text-base sm:text-lg text-[#2470BB]">Nivel 2: Intermedio</span>
+        </div>
+      </div>
+
+      <button id="btn-close-levelup" onclick="window.closeLevelUpModal()" class="w-full py-3.5 bg-gradient-to-r from-sky-500 to-[#2470BB] hover:from-sky-600 hover:to-blue-700 text-white rounded-2xl font-bold text-sm shadow-md transition active:scale-95 cursor-pointer">
+        ¡Continuar Aprendiendo! 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast flotante de racha / acierto -->
+  <div id="streak-floating-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[80] pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
+    <div class="bg-gray-900/90 backdrop-blur-sm text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold border border-white/10">
+      <span id="streak-toast-icon">🔥</span>
+      <span id="streak-toast-text">+1 Acierto</span>
+    </div>
+  </div>
+
   <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A POSTGRESQL ==================== -->
   <script type="module">
     import { api, initDbStatusBadge } from "./js/api.js";
+    import { activitiesEngine } from "./js/activities.js";
 
     // 1. Inicializar indicador visual de conexión a PostgreSQL
     initDbStatusBadge();
@@ -271,6 +354,7 @@
 
     // 4. Variables del Motor de Quiz (Se llena automáticamente de PostgreSQL)
     let unitQuestions = [];
+    let unitActivities = [];
     let currentUnitQuestionLimit = 10;
     let quizData = [];
     let currentQuestionIndex = 0;
@@ -407,6 +491,17 @@
     };
 
     // 10. Alternar Pestañas Recursos y Actividades
+    // Estado de progreso adaptativo del estudiante
+    let studentProgress = {
+      aciertos: 0,
+      rachaActual: 0,
+      rachaMaxima: 0,
+      nivelActual: 1,
+      actividadesCompletadas: []
+    };
+    let currentFilter = 'all';
+
+    // 10. Alternar Pestañas Recursos y Actividades
     window.switchTab = async (tab) => {
       const content = document.getElementById('unit-content');
       const btnRec = document.getElementById('tabRecursos');
@@ -417,8 +512,8 @@
         btnAct.className = "flex flex-col items-center text-gray-400 transition";
 
         content.innerHTML = `
-          <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
+          <h1 class="text-2xl sm:text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
+          <h2 class="text-base sm:text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
           <div id="recursos-container" class="space-y-3">
             <div class="text-center py-6 text-gray-400">Cargando recursos desde PostgreSQL...</div>
           </div>`;
@@ -459,85 +554,523 @@
           document.getElementById('recursos-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al cargar recursos desde PostgreSQL.</div>';
         }
       } else {
-        // Pestaña Actividades: CARGA AUTOMÁTICA DESDE POSTGRESQL
+        // ==================== PESTAÑA ACTIVIDADES Y AUTOAPRENDIZAJE ADAPTATIVO ====================
         btnAct.className = "flex flex-col items-center text-[#2470BB] transition";
         btnRec.className = "flex flex-col items-center text-gray-400 transition";
 
         content.innerHTML = `
-          <h1 class="text-3xl font-bold text-[#2470BB] mb-1">Actividades</h1>
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">${currentUnitTitle}</h2>
-          <div id="actividades-container" class="space-y-4 max-w-lg mx-auto">
-            <div class="text-center py-6 text-gray-400">Consultando actividades disponibles en PostgreSQL...</div>
+          <div class="max-w-3xl mx-auto space-y-6 pb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-[#2470BB] mb-0.5">Ruta de Autoaprendizaje</h1>
+                <h2 class="text-sm sm:text-base font-semibold text-gray-800">${currentUnitTitle}</h2>
+              </div>
+              <span class="text-xs font-bold text-sky-700 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-100 self-start sm:self-auto">
+                📈 Progresión por Aciertos
+              </span>
+            </div>
+
+            <!-- Contenedor del Dashboard y Actividades -->
+            <div id="actividades-container" class="space-y-6">
+              <div class="text-center py-10 text-gray-400">
+                <i class="fa-solid fa-spinner fa-spin text-2xl text-sky-500 mb-2 block"></i>
+                <span>Cargando tu progreso y actividades personalizadas...</span>
+              </div>
+            </div>
           </div>`;
 
         try {
-          const preguntas = await api.getPreguntas(currentUnitId);
-          const config = await api.getQuizConfig(currentUnitId).catch(() => ({ limitePreguntas: 10 }));
+          const [preguntas, actividades, config, progreso] = await Promise.all([
+            api.getPreguntas(currentUnitId).catch(() => []),
+            api.getActividades(currentUnitId).catch(() => []),
+            api.getQuizConfig(currentUnitId).catch(() => ({ limitePreguntas: 10 })),
+            api.getProgreso(currentUnitId).catch(() => ({ aciertos: 0, rachaActual: 0, rachaMaxima: 0, nivelActual: 1, actividadesCompletadas: [] }))
+          ]);
+
+          unitActivities = actividades || [];
           currentUnitQuestionLimit = config?.limitePreguntas || 10;
+          studentProgress = progreso || { aciertos: 0, rachaActual: 0, rachaMaxima: 0, nivelActual: 1, actividadesCompletadas: [] };
 
-          const actContainer = document.getElementById('actividades-container');
-          actContainer.innerHTML = '';
+          renderAdaptiveActivitiesDashboard(preguntas);
 
-          // 1. Si no hay preguntas en PostgreSQL para esta unidad:
-          if (!preguntas || preguntas.length === 0) {
-            unitQuestions = [];
-            actContainer.innerHTML = `
-              <div class="p-8 bg-white rounded-2xl shadow-sm border border-dashed border-gray-200 text-center">
-                <span class="text-3xl mb-2 block">📝</span>
-                <p class="text-gray-700 font-semibold text-base">No hay actividades publicadas aún</p>
-                <p class="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
-                  El test está listo en el sistema, pero se encuentra vacío a la espera de que el docente configure preguntas para esta unidad desde el Panel Docente.
-                </p>
-              </div>`;
-            return;
-          }
-
-          // 2. Si hay preguntas en PostgreSQL, se cargan de forma automática:
-          unitQuestions = preguntas.map(doc => ({
-            id: String(doc.id),
-            question: doc.pregunta || doc.question,
-            image: doc.imagen || doc.image || "",
-            options: doc.opciones || doc.options || [],
-            blocks: doc.opciones || doc.options || [],
-            correct: doc.correcta || doc.correct,
-            type: (doc.tipo === "fill" || doc.type === "drag-and-drop") ? "drag-and-drop" : "multiple"
-          }));
-
-          const totalInDb = unitQuestions.length;
-          const displayLimit = (currentUnitQuestionLimit === 'all' || !currentUnitQuestionLimit) 
-            ? totalInDb 
-            : Math.min(parseInt(currentUnitQuestionLimit, 10) || 10, totalInDb);
-
-          actContainer.innerHTML = `
-            <div id="start-unit1-test" onclick="window.startQuiz()" class="flex items-center gap-4 p-5 bg-white shadow-md rounded-2xl border-b-4 border-sky-400 cursor-pointer transition hover:bg-gray-50 active:scale-95 duration-300">
-              <div class="w-14 h-14 bg-sky-50 text-[#2470BB] rounded-2xl flex items-center justify-center text-2xl shadow-xs">
-                <i class="fa-solid fa-shuffle"></i>
-              </div>
-              <div class="flex-1">
-                <h3 class="font-bold text-gray-800 text-lg">${currentUnitTitle} - Test Interactivo</h3>
-                <p class="text-xs text-sky-600 font-bold mt-0.5">
-                  🎲 ${displayLimit} preguntas seleccionadas al azar
-                  <span class="text-gray-400 font-normal">(de ${totalInDb} disponibles en PostgreSQL)</span>
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
-                <span class="text-sky-500 font-bold text-xl">→</span>
-              </div>
-            </div>
-
-            <div class="p-4 bg-sky-50/70 border border-sky-100 rounded-2xl text-xs text-sky-800 leading-relaxed">
-              <p class="font-bold mb-1 flex items-center gap-1.5">
-                <i class="fa-solid fa-dice text-[#2470BB]"></i>
-                <span>Selección Aleatoria Automática</span>
-              </p>
-              El banco contiene <b>${totalInDb} preguntas</b> en PostgreSQL. Para esta evaluación se presentarán <b>${displayLimit} preguntas</b> escogidas al azar en cada intento, garantizando variedad pedagógica.
-            </div>`;
         } catch (err) {
-          console.error("Error al cargar actividades:", err);
+          console.error("Error al cargar actividades y progreso:", err);
           document.getElementById('actividades-container').innerHTML = '<div class="text-center text-red-500 py-6">Error al conectar con la base de datos PostgreSQL.</div>';
         }
       }
+    };
+
+    // Renderiza el Dashboard de Progresión y la lista de Actividades filtradas
+    window.renderAdaptiveActivitiesDashboard = (preguntas) => {
+      const actContainer = document.getElementById('actividades-container');
+      if (!actContainer) return;
+
+      const p = studentProgress;
+      const nivel = p.nivelActual || 1;
+      const aciertos = p.aciertos || 0;
+      const racha = p.rachaActual || 0;
+
+      // Definición visual del nivel pedagógico
+      let nivelColor = 'from-emerald-500 to-teal-600';
+      let nivelBadge = '🌱 Nivel 1: Principiante';
+      let nivelDesc = 'Aprende vocabulario base y conceptos esenciales';
+      let nextTarget = 5;
+      let targetProgress = Math.min(Math.round((aciertos / 5) * 100), 100);
+
+      if (nivel === 2) {
+        nivelColor = 'from-sky-500 to-blue-600';
+        nivelBadge = '⚡ Nivel 2: Intermedio';
+        nivelDesc = 'Aplica vocabulario en crucigramas y búsqueda de palabras';
+        nextTarget = 15;
+        targetProgress = Math.min(Math.round(((aciertos - 5) / 10) * 100), 100);
+      } else if (nivel >= 3) {
+        nivelColor = 'from-indigo-600 to-purple-700';
+        nivelBadge = '🏆 Nivel 3: Desafío Experto';
+        nivelDesc = 'Domina retos de ortografía y vocabulario avanzado';
+        nextTarget = 15;
+        targetProgress = 100;
+      }
+
+      // Mensaje del Tutor Adaptativo
+      let tutorMsg = '¡Hola! Empieza con las actividades de Nivel 1. A medida que sumes aciertos y mantengas tu racha, desbloquearás retos más avanzados.';
+      if (racha >= 3 && nivel === 1) {
+        tutorMsg = `¡Excelente racha de ${racha} aciertos seguidos! 🔥 Estás a punto de ascender al Nivel 2.`;
+      } else if (nivel === 2) {
+        tutorMsg = `¡Gran desempeño! Tienes desbloqueados Crucigrama y Sopa de Letras. Sigue acertando para desbloquear el reto del Ahorcado.`;
+      } else if (nivel >= 3) {
+        tutorMsg = `¡Nivel Maestro! 🏆 Has desbloqueado todas las actividades disponibles en esta unidad.`;
+      }
+
+      // 1. Mapear preguntas para el Test Adaptativo
+      if (preguntas) {
+        unitQuestions = preguntas.map(doc => ({
+          id: String(doc.id),
+          question: doc.pregunta || doc.question,
+          image: doc.imagen || doc.image || "",
+          options: doc.opciones || doc.options || [],
+          blocks: doc.opciones || doc.options || [],
+          correct: doc.correcta || doc.correct,
+          type: (doc.tipo === "fill" || doc.type === "drag-and-drop") ? "drag-and-drop" : "multiple"
+        }));
+      }
+
+      const totalInDb = unitQuestions.length;
+      const displayLimit = (currentUnitQuestionLimit === 'all' || !currentUnitQuestionLimit) 
+        ? totalInDb 
+        : Math.min(parseInt(currentUnitQuestionLimit, 10) || 10, totalInDb);
+
+      // Actividades estándar por defecto si la base de datos no tiene una específica
+      const defaultStandard = [
+        { tipo: 'fill', titulo: 'Completar con Cuadros', nivelDificultad: 1, aciertosRequeridos: 0, puntosRecompensa: 10, descripcion: 'Completa oraciones con el cuadro de texto adecuado.' },
+        { tipo: 'memorama', titulo: 'Memorama Educativo 3D', nivelDificultad: 1, aciertosRequeridos: 0, puntosRecompensa: 15, descripcion: 'Empareja banderas, países y vocabulario volteando cartas.' },
+        { tipo: 'crucigrama', titulo: 'Crucigrama Temático', nivelDificultad: 2, aciertosRequeridos: 5, puntosRecompensa: 25, descripcion: 'Resuelve pistas Across y Down con teclado interactivo.' },
+        { tipo: 'sopa_letras', titulo: 'Sopa de Letras', nivelDificultad: 2, aciertosRequeridos: 5, puntosRecompensa: 20, descripcion: 'Busca países y capitales en la cuadrícula de letras.' },
+        { tipo: 'ahorcado', titulo: 'El Ahorcado (Hangman)', nivelDificultad: 3, aciertosRequeridos: 10, puntosRecompensa: 35, descripcion: 'Adivina la palabra en inglés antes de agotar tus 6 vidas.' }
+      ];
+
+      // Fusionar actividades de BD con las estándar
+      const activitiesList = defaultStandard.map(std => {
+        const found = unitActivities.find(a => a.tipo === std.tipo);
+        return {
+          ...std,
+          ...(found || {}),
+          nivelDificultad: found?.nivelDificultad || std.nivelDificultad,
+          aciertosRequeridos: found?.aciertosRequeridos !== undefined ? found.aciertosRequeridos : std.aciertosRequeridos,
+          puntosRecompensa: found?.puntosRecompensa || std.puntosRecompensa,
+          titulo: found?.titulo || std.titulo
+        };
+      });
+
+      // Filtrar actividades según pestaña activa
+      const filteredActivities = activitiesList.filter(act => {
+        if (currentFilter === 'all') return true;
+        if (currentFilter === 'recommended') {
+          return act.nivelDificultad === nivel || (act.nivelDificultad < nivel);
+        }
+        return act.nivelDificultad === parseInt(currentFilter, 10);
+      });
+
+      // Header del Dashboard Adaptativo
+      const dashboardHeaderHtml = `
+        <!-- Tarjeta de Nivel y Estadísticas del Estudiante -->
+        <div class="bg-gradient-to-br ${nivelColor} text-white p-5 sm:p-6 rounded-3xl shadow-lg relative overflow-hidden">
+          <div class="relative z-10 space-y-4">
+            
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-xs rounded-full text-xs font-black uppercase tracking-wider mb-1">
+                  ${nivelBadge}
+                </span>
+                <p class="text-xs sm:text-sm text-white/90 font-medium">${nivelDesc}</p>
+              </div>
+
+              <!-- Indicadores Rápidos -->
+              <div class="flex items-center gap-2">
+                <div class="bg-black/20 backdrop-blur-xs px-3 py-1.5 rounded-2xl flex items-center gap-1.5 text-xs font-bold border border-white/10" title="Racha actual de aciertos">
+                  <span>🔥 Racha:</span>
+                  <span class="text-amber-300 font-black text-sm">${racha}</span>
+                </div>
+                <div class="bg-black/20 backdrop-blur-xs px-3 py-1.5 rounded-2xl flex items-center gap-1.5 text-xs font-bold border border-white/10" title="Total de aciertos acumulados">
+                  <span>⭐ Aciertos:</span>
+                  <span class="text-yellow-300 font-black text-sm">${aciertos}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra de Progresión hacia el siguiente Nivel -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex justify-between text-xs font-bold">
+                <span>Progreso hacia ${nivel >= 3 ? 'Dominio Total' : `Nivel ${nivel + 1}`}</span>
+                <span>${nivel >= 3 ? '100%' : `${aciertos} / ${nextTarget} aciertos`}</span>
+              </div>
+              <div class="w-full h-3 bg-black/20 rounded-full overflow-hidden p-0.5 border border-white/20">
+                <div class="h-full bg-gradient-to-r from-amber-300 to-yellow-400 rounded-full transition-all duration-700" style="width: ${targetProgress}%"></div>
+              </div>
+            </div>
+
+            <!-- Recomendación del Tutor -->
+            <div class="bg-white/15 backdrop-blur-xs p-3 rounded-2xl flex items-start gap-2.5 text-xs border border-white/15">
+              <span class="text-base">💡</span>
+              <p class="leading-relaxed flex-1 font-medium">${tutorMsg}</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Filtros Rápidos por Nivel de Dificultad -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <button onclick="window.setActivityFilter('all')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === 'all' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
+            Todas (5)
+          </button>
+          <button onclick="window.setActivityFilter('recommended')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === 'recommended' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
+            🎯 Recomendadas
+          </button>
+          <button onclick="window.setActivityFilter('1')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === '1' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
+            🌱 Nivel 1 (Fácil)
+          </button>
+          <button onclick="window.setActivityFilter('2')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === '2' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
+            ⚡ Nivel 2 (Medio)
+          </button>
+          <button onclick="window.setActivityFilter('3')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === '3' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
+            🏆 Nivel 3 (Desafío)
+          </button>
+        </div>
+      `;
+
+      // Tarjetas de Actividades Dinámicas (con Candados o Desbloqueadas según Aciertos y Nivel)
+      const cardsHtml = filteredActivities.map(act => {
+        const req = act.aciertosRequeridos || 0;
+        const isUnlocked = (aciertos >= req) || (nivel >= act.nivelDificultad);
+        const missing = Math.max(0, req - aciertos);
+        const unlockPct = req > 0 ? Math.min(Math.round((aciertos / req) * 100), 100) : 100;
+
+        let icon = '🎮';
+        let badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        let levelLabel = '🌱 Nivel 1';
+        if (act.tipo === 'fill') icon = '🧩';
+        else if (act.tipo === 'memorama') icon = '🎴';
+        else if (act.tipo === 'crucigrama') icon = '✏️';
+        else if (act.tipo === 'sopa_letras') icon = '🔎';
+        else if (act.tipo === 'ahorcado') icon = '🪢';
+
+        if (act.nivelDificultad === 2) {
+          badgeColor = 'bg-sky-50 text-sky-700 border-sky-200';
+          levelLabel = '⚡ Nivel 2';
+        } else if (act.nivelDificultad === 3) {
+          badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+          levelLabel = '🏆 Nivel 3';
+        }
+
+        if (isUnlocked) {
+          return `
+            <div onclick="window.launchActivity('${act.tipo}')" class="p-4 sm:p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-sky-300 transition duration-200 cursor-pointer flex flex-col justify-between group active:scale-98">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="w-10 h-10 rounded-2xl bg-sky-50 text-xl flex items-center justify-center group-hover:scale-110 transition shrink-0">
+                      ${icon}
+                    </span>
+                    <div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeColor}">${levelLabel}</span>
+                      <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 ml-1">+${act.puntosRecompensa || 10} XP</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                    <i class="fa-solid fa-lock-open text-[9px]"></i> Desbloqueada
+                  </span>
+                </div>
+                <h4 class="font-bold text-gray-800 text-base group-hover:text-[#2470BB] transition">${act.titulo}</h4>
+                <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${act.descripcion}</p>
+              </div>
+
+              <div class="pt-4 mt-2 border-t border-slate-50 flex items-center justify-between">
+                <span class="text-xs font-bold text-sky-600 group-hover:translate-x-1 transition flex items-center gap-1">
+                  <span>Jugar Ahora</span>
+                  <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </span>
+                <span class="w-7 h-7 rounded-xl bg-sky-50 text-[#2470BB] flex items-center justify-center text-xs group-hover:bg-[#2470BB] group-hover:text-white transition">
+                  <i class="fa-solid fa-play text-[10px]"></i>
+                </span>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="p-4 sm:p-5 bg-slate-50/70 rounded-3xl border border-dashed border-slate-300 shadow-2xs flex flex-col justify-between opacity-85 select-none relative overflow-hidden">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="w-10 h-10 rounded-2xl bg-slate-200/60 text-slate-500 text-xl flex items-center justify-center shrink-0">
+                      🔒
+                    </span>
+                    <div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border bg-slate-100 text-slate-600 border-slate-200">${levelLabel}</span>
+                      <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 ml-1">+${act.puntosRecompensa || 10} XP</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-lock text-[9px]"></i> Bloqueada
+                  </span>
+                </div>
+                <h4 class="font-bold text-slate-700 text-base">${act.titulo}</h4>
+                <p class="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">${act.descripcion}</p>
+              </div>
+
+              <!-- Requisito para desbloquear -->
+              <div class="pt-3 mt-3 border-t border-slate-200/60 space-y-1.5">
+                <div class="flex justify-between items-center text-[11px] font-bold text-slate-600">
+                  <span>Req: ${req} aciertos</span>
+                  <span class="text-amber-700 font-semibold">Te faltan ${missing} aciertos</span>
+                </div>
+                <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-400 rounded-full" style="width: ${unlockPct}%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }).join('');
+
+      // Test Evaluativo Adaptativo
+      let testCardHtml = '';
+      if (totalInDb > 0) {
+        testCardHtml = `
+          <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-[#2470BB]"></i>
+                <span>Evaluación Oficial Adaptativa</span>
+              </h3>
+              <span class="text-[11px] font-bold text-[#2470BB] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                🎲 ${displayLimit} aleatorias
+              </span>
+            </div>
+
+            <div id="start-unit1-test" onclick="window.startQuiz()" class="flex items-center gap-4 p-4 sm:p-5 bg-white shadow-sm rounded-3xl border-b-4 border-sky-400 cursor-pointer transition hover:shadow-md hover:bg-slate-50 active:scale-98 duration-200">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-sky-400 to-[#2470BB] text-white rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-sm shrink-0">
+                <i class="fa-solid fa-dice"></i>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-bold text-gray-800 text-sm sm:text-base leading-snug">${currentUnitTitle} - Test Interactivo</h4>
+                <p class="text-xs text-sky-600 font-semibold mt-0.5">
+                  Calificación automática con semáforo inteligente de desempeño
+                </p>
+                <p class="text-[11px] text-gray-400 mt-0.5">
+                  Banco de ${totalInDb} preguntas registradas en PostgreSQL
+                </p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
+                <span class="text-sky-500 font-bold text-lg sm:text-xl">→</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      actContainer.innerHTML = `
+        ${dashboardHeaderHtml}
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-gamepad text-emerald-600"></i>
+              <span>Actividades Interactivas</span>
+            </h3>
+            <span class="text-xs text-gray-400 font-semibold">
+              ${filteredActivities.length} visibles
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            ${cardsHtml}
+          </div>
+        </div>
+        ${testCardHtml}
+      `;
+    };
+
+    // Cambia el filtro de actividades y refresca la vista
+    window.setActivityFilter = (filter) => {
+      currentFilter = filter;
+      renderAdaptiveActivitiesDashboard();
+    };
+
+    // ==================== REPORTE DE PROGRESO DESDE JUEGOS ====================
+    window.reportActivityProgress = async (tipo, esAcierto, isCompleted) => {
+      try {
+        const res = await api.registrarAcierto({
+          unidadId: currentUnitId,
+          tipoActividad: tipo,
+          esAcierto: esAcierto,
+          completada: isCompleted
+        });
+
+        if (res && res.progreso) {
+          studentProgress = res.progreso;
+
+          // Actualizar insignia flotante de racha en el encabezado del juego
+          const liveStreak = document.getElementById('activity-live-streak-count');
+          if (liveStreak) {
+            liveStreak.innerText = studentProgress.rachaActual || 0;
+          }
+
+          // Notificación flotante de racha o acierto
+          if (esAcierto) {
+            showStreakToast(`+1 Acierto ⭐ (Racha: ${studentProgress.rachaActual} 🔥)`);
+          }
+
+          // Si subió de nivel pedagógico, disparar celebración
+          if (res.nivelSubido) {
+            window.showLevelUpModal(studentProgress.nivelActual, studentProgress.rachaActual);
+          }
+        }
+      } catch (err) {
+        console.warn("Error al registrar acierto:", err);
+      }
+    };
+
+    // Muestra el toast flotante temporal
+    window.showStreakToast = (text) => {
+      const toast = document.getElementById('streak-floating-toast');
+      const toastText = document.getElementById('streak-toast-text');
+      if (toast && toastText) {
+        toastText.innerText = text;
+        toast.classList.remove('opacity-0', '-translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(window._streakToastTimer);
+        window._streakToastTimer = setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-4');
+        }, 2200);
+      }
+    };
+
+    // Abre el modal de Subida de Nivel
+    window.showLevelUpModal = (nuevoNivel, racha) => {
+      const modal = document.getElementById('modal-level-up');
+      const title = document.getElementById('levelup-title');
+      const desc = document.getElementById('levelup-desc');
+      const badgeName = document.getElementById('levelup-badge-name');
+      const badgeIcon = document.getElementById('levelup-badge-icon');
+
+      if (modal) {
+        if (nuevoNivel === 2) {
+          title.innerText = '¡Ascendiste a Nivel 2!';
+          desc.innerText = '¡Felicidades por tu constancia! Has desbloqueado el Crucigrama y la Sopa de Letras para poner a prueba tu destreza.';
+          badgeName.innerText = 'Nivel 2: Intermedio';
+          badgeIcon.innerText = '⚡';
+        } else if (nuevoNivel >= 3) {
+          title.innerText = '¡Alcanzaste el Nivel 3!';
+          desc.innerText = '¡Extraordinario! Eres un experto en este vocabulario. Has desbloqueado el Desafío del Ahorcado.';
+          badgeName.innerText = 'Nivel 3: Desafío Experto';
+          badgeIcon.innerText = '🏆';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        // Confeti festivo
+        if (typeof window.confetti === 'function') {
+          window.confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
+        }
+      }
+    };
+
+    window.closeLevelUpModal = () => {
+      const modal = document.getElementById('modal-level-up');
+      if (modal) {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+      }
+    };
+
+    // ==================== LANZADOR DE ACTIVIDADES INTERACTIVAS ====================
+    window.launchActivity = (tipo) => {
+      // Actualizar contador de racha en vivo al ingresar
+      const liveStreak = document.getElementById('activity-live-streak-count');
+      if (liveStreak && studentProgress) {
+        liveStreak.innerText = studentProgress.rachaActual || 0;
+      }
+      const actScreen = document.getElementById('activity-modal-screen');
+      const detailScreen = document.getElementById('view-detail');
+      const body = document.getElementById('activity-game-body');
+      const titleEl = document.getElementById('activity-screen-title');
+      const subEl = document.getElementById('activity-screen-subtitle');
+      const tagEl = document.getElementById('activity-screen-tag');
+
+      // Buscar configuración en la base de datos o usar respaldo enriquecido
+      const found = unitActivities.find(a => a.tipo === tipo);
+      const datos = found?.datos || {};
+
+      subEl.innerText = currentUnitTitle;
+
+      if (tipo === 'fill') {
+        titleEl.innerText = found?.titulo || 'Completar con Cuadros';
+        tagEl.innerText = '🧩 Cuadros de Texto';
+        tagEl.className = 'px-3 py-1 bg-sky-50 text-sky-700 rounded-xl text-xs font-bold border border-sky-100';
+        activitiesEngine.renderFill(body, datos, window.closeActivityScreen);
+      } else if (tipo === 'memorama') {
+        titleEl.innerText = found?.titulo || 'Memorama Educativo 3D';
+        tagEl.innerText = '🎴 Memory Match';
+        tagEl.className = 'px-3 py-1 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100';
+        activitiesEngine.renderMemorama(body, datos, window.closeActivityScreen);
+      } else if (tipo === 'crucigrama') {
+        titleEl.innerText = found?.titulo || 'Crucigrama de Vocabulario';
+        tagEl.innerText = '✏️ Crossword';
+        tagEl.className = 'px-3 py-1 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100';
+        activitiesEngine.renderCrucigrama(body, datos, window.closeActivityScreen);
+      } else if (tipo === 'sopa_letras') {
+        titleEl.innerText = found?.titulo || 'Sopa de Letras';
+        tagEl.innerText = '🔎 Word Search';
+        tagEl.className = 'px-3 py-1 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-100';
+        activitiesEngine.renderSopaLetras(body, datos, window.closeActivityScreen);
+      } else if (tipo === 'ahorcado') {
+        titleEl.innerText = found?.titulo || 'El Ahorcado (Hangman)';
+        tagEl.innerText = '🪢 Ahorcado 6 Vidas';
+        tagEl.className = 'px-3 py-1 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold border border-rose-100';
+        activitiesEngine.renderAhorcado(body, datos, window.closeActivityScreen);
+      }
+
+      // Transición
+      detailScreen.classList.replace('opacity-100', 'opacity-0');
+      setTimeout(() => {
+        detailScreen.classList.add('hidden');
+        actScreen.classList.remove('hidden');
+        setTimeout(() => actScreen.classList.replace('opacity-0', 'opacity-100'), 50);
+      }, 300);
+    };
+
+    window.closeActivityScreen = () => {
+      const actScreen = document.getElementById('activity-modal-screen');
+      const detailScreen = document.getElementById('view-detail');
+      actScreen.classList.replace('opacity-100', 'opacity-0');
+      setTimeout(() => {
+        actScreen.classList.add('hidden');
+        detailScreen.classList.remove('hidden');
+        setTimeout(() => detailScreen.classList.replace('opacity-0', 'opacity-100'), 50);
+        // Refrescar actividades y candados automáticamente
+        switchTab('actividades');
+      }, 300);
     };
 
     // Helper: Algoritmo de barajado aleatorio Fisher-Yates
@@ -609,29 +1142,89 @@
       selectedValue = null;
 
       if (data.type === "drag-and-drop") {
-        // Frase interactiva con espacio de inserción
+        // Frase interactiva con espacio de inserción mejorado (Drag & Drop + Tap + Quitar)
         const sentence = document.createElement('div');
-        sentence.className = "text-xl font-bold text-center text-gray-800 mb-6 p-4 bg-sky-50 rounded-xl border-2 border-dashed border-sky-200";
+        sentence.className = "text-xl font-bold text-center text-gray-800 mb-6 p-5 bg-gradient-to-r from-sky-50 via-white to-blue-50 rounded-2xl border-2 border-dashed border-sky-300";
         const cleanText = data.question.includes("______") ? data.question : data.question.replace(/\[box\]/g, "______");
-        sentence.innerHTML = cleanText.replace("______", `<span id="drop-target" class="inline-block min-w-[100px] border-b-2 border-sky-500 text-sky-600 mx-2">_______</span>`);
+        
+        sentence.innerHTML = `
+          <div class="flex items-center justify-center gap-2 mb-2">
+            <button onclick="window.activitiesEngine.speak('${cleanText.replace('______', data.correct)}')" class="text-xs font-bold text-sky-600 bg-sky-100 hover:bg-sky-200 px-3 py-1 rounded-xl transition flex items-center gap-1">
+              <i class="fa-solid fa-volume-high"></i> Escuchar frase
+            </button>
+          </div>
+          <div>${cleanText.replace("______", `<span id="drop-target" class="inline-flex items-center justify-center min-w-[120px] min-h-[42px] px-3 py-1 border-2 border-dashed border-sky-400 bg-sky-50 text-sky-700 font-bold rounded-xl transition-all cursor-pointer mx-1.5">Arrastra aquí</span>`)}</div>
+        `;
         optionsContainer.appendChild(sentence);
 
         // Bloques de palabras
         const blocksWrap = document.createElement('div');
         blocksWrap.className = "flex flex-wrap gap-3 justify-center mt-4";
 
+        const dropTarget = sentence.querySelector('#drop-target');
+
+        function placeInQuizBox(word, blockEl) {
+          selectedValue = word;
+          dropTarget.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 text-sky-800 bg-sky-100 px-2.5 py-0.5 rounded-lg">
+              <b>${word}</b>
+              <span class="text-xs text-sky-500 font-bold hover:text-red-500">✕</span>
+            </span>
+          `;
+          dropTarget.classList.remove('border-dashed', 'border-sky-400');
+          dropTarget.classList.add('border-solid', 'border-sky-600', 'bg-white');
+
+          blocksWrap.querySelectorAll('.quiz-block-opt').forEach(b => {
+            if (b.dataset.word === word) {
+              b.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+              b.classList.remove('opacity-40', 'pointer-events-none');
+            }
+          });
+
+          enableCheckBtn();
+        }
+
+        function resetQuizBox() {
+          selectedValue = null;
+          dropTarget.innerHTML = 'Arrastra aquí';
+          dropTarget.className = 'inline-flex items-center justify-center min-w-[120px] min-h-[42px] px-3 py-1 border-2 border-dashed border-sky-400 bg-sky-50 text-sky-700 font-bold rounded-xl transition-all cursor-pointer mx-1.5';
+          blocksWrap.querySelectorAll('.quiz-block-opt').forEach(b => b.classList.remove('opacity-40', 'pointer-events-none'));
+          const checkBtn = document.getElementById('btnCheckAnswer');
+          checkBtn.disabled = true;
+          checkBtn.className = "w-full bg-gray-300 text-white py-4 rounded-2xl font-bold text-lg shadow-lg cursor-not-allowed";
+        }
+
+        dropTarget.onclick = () => {
+          if (selectedValue) resetQuizBox();
+        };
+
+        dropTarget.ondragover = (e) => {
+          e.preventDefault();
+          dropTarget.classList.add('bg-sky-100', 'scale-105');
+        };
+        dropTarget.ondragleave = () => {
+          dropTarget.classList.remove('bg-sky-100', 'scale-105');
+        };
+        dropTarget.ondrop = (e) => {
+          e.preventDefault();
+          dropTarget.classList.remove('bg-sky-100', 'scale-105');
+          const w = e.dataTransfer.getData('text/plain');
+          if (w) placeInQuizBox(w);
+        };
+
         (data.blocks || data.options || []).forEach(word => {
           const block = document.createElement('div');
-          block.className = "px-6 py-2 bg-white border-2 border-gray-200 rounded-xl shadow-sm cursor-pointer font-bold text-gray-700 transition-all active:scale-95";
+          block.draggable = true;
+          block.dataset.word = word;
+          block.className = "quiz-block-opt px-6 py-2.5 bg-white border-2 border-slate-200 hover:border-sky-400 rounded-xl shadow-xs cursor-grab active:cursor-grabbing font-bold text-gray-700 transition-all active:scale-95 select-none";
           block.innerText = word;
-          block.onclick = () => {
-            blocksWrap.querySelectorAll('div').forEach(b => b.classList.remove('border-sky-500', 'bg-sky-50', 'text-sky-600'));
-            block.classList.add('border-sky-500', 'bg-sky-50', 'text-sky-600');
-            const target = document.getElementById('drop-target');
-            if (target) target.innerText = word;
-            selectedValue = word;
-            enableCheckBtn();
+
+          block.onclick = () => placeInQuizBox(word, block);
+          block.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', word);
           };
+
           blocksWrap.appendChild(block);
         });
         optionsContainer.appendChild(blocksWrap);
