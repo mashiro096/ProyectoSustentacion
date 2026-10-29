@@ -106,7 +106,7 @@ A diferencia de los prototipos iniciales que contenían bancos de preguntas est�
 
 ## 🎮 4.1 Centro de Actividades Lúdicas Interactivas
 
-Además de la evaluación adaptativa general, el sistema integra **5 actividades didácticas gamificadas** sincronizadas en PostgreSQL (`actividades_unidad`) con síntesis de voz en inglés (*Text-to-Speech*) y animaciones dinámicas:
+Además de la evaluación adaptativa general, el sistema integra **5 actividades didácticas gamificadas** sincronizadas en PostgreSQL (`actividades_unidad`) con instrucciones, pistas y resultados visuales:
 
 1. 🧩 **Completar con Cuadros (`fill`)**:
    - Ejercicios interactivos con imágenes descriptivas de apoyo.
@@ -132,6 +132,9 @@ Además de la evaluación adaptativa general, el sistema integra **5 actividades
 Abre el archivo [`.env`](file:///c:/Users/LENOVO/Documents/ProyectoSustentacion/.env) y coloca la contraseña real en la cadena de conexión o parámetros individuales:
 ```ini
 PORT=3000
+
+# Solo si el frontend se publica en otro dominio. Separa varios valores con comas.
+# CORS_ORIGINS=https://tu-dominio.com,https://admin.tu-dominio.com
 
 # Cadena de conexión directa a PostgreSQL
 DATABASE_URL=postgresql://singling_app:tu_password_real@38.146.27.217:5432/singling_db

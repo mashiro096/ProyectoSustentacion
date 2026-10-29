@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Las rutas internas pueden recargarse; los recursos siempre se resuelven desde la raíz. -->
+  <base href="/" />
   <title>SingLing - Portal Estudiante</title>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -29,6 +31,10 @@
     body.high-contrast .bg-gray-50 { background: #f8fafc !important; }
     body.high-contrast .text-gray-400 { color: #374151 !important; }
     body.high-contrast .text-gray-500 { color: #1f2937 !important; }
+    body.learning-mode { font-size: 18px; line-height: 1.65; }
+    body.learning-mode .text-xs { font-size: .82rem !important; }
+    body.learning-mode .text-[11px], body.learning-mode .text-[10px] { font-size: .75rem !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   </style>
@@ -67,7 +73,7 @@
   </div>
 
   <!-- ==================== 3. VISTA DE GRADOS ==================== -->
-  <div id="view-grades" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-10 flex flex-col">
+  <div id="view-grades" class="app-view absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-10 flex flex-col">
     <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
       <div class="flex items-center gap-3">
         <img src="img/logo.png" alt="Logo SingLing" class="w-10 h-10 object-contain" />
@@ -89,10 +95,10 @@
   </div>
 
   <!-- ==================== 4. VISTA DE MATERIAS ==================== -->
-  <div id="view-subjects" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-20 flex flex-col">
+  <div id="view-subjects" class="app-view absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-20 flex flex-col">
     <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
       <div class="flex items-center gap-3">
-        <button onclick="navigate('view-subjects', 'view-grades')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <button onclick="window.backToGrades()" aria-label="Volver a grados" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
         <div>
           <h1 class="text-lg font-bold text-[#2470BB]">Materias</h1>
           <p id="subtitulo-grado" class="text-[11px] text-gray-400 uppercase font-semibold"></p>
@@ -108,10 +114,10 @@
   </div>
 
   <!-- ==================== 5. VISTA DE UNIDADES ==================== -->
-  <div id="view-units" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-30 flex flex-col">
+  <div id="view-units" class="app-view absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-30 flex flex-col">
     <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
       <div class="flex items-center gap-3">
-        <button onclick="navigate('view-units', 'view-subjects')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <button onclick="window.backToSubjects()" aria-label="Volver a materias" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
         <div class="flex items-center gap-2">
           <img src="img/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
           <span class="font-semibold text-[#2470BB]">SingLing</span>
@@ -132,10 +138,10 @@
   </div>
 
   <!-- ==================== 6. VISTA DETALLE DE UNIDAD (RECURSOS / ACTIVIDADES) ==================== -->
-  <div id="view-detail" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-40 flex flex-col">
+  <div id="view-detail" class="app-view absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-40 flex flex-col">
     <header class="flex items-center justify-between px-6 py-4 border-b bg-white shadow-xs">
       <div class="flex items-center gap-3">
-        <button onclick="navigate('view-detail', 'view-units')" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
+        <button onclick="window.backToUnits()" aria-label="Volver a unidades" class="text-2xl text-gray-600 hover:text-gray-900 transition">←</button>
         <div class="flex items-center gap-2">
           <img src="img/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
           <span class="font-semibold text-[#2470BB]">SingLing</span>
@@ -149,11 +155,11 @@
 
     <!-- Pestañas inferiores Recursos y Actividades -->
     <div class="border-t py-3 flex justify-around bg-white shadow-sm">
-      <button id="tabRecursos" onclick="switchTab('recursos')" class="flex flex-col items-center text-[#2470BB] transition">
+      <button id="tabRecursos" onclick="switchTab('recursos')" aria-selected="true" class="flex flex-col items-center text-[#2470BB] transition">
         <span class="text-2xl">📖</span>
         <p class="text-xs font-semibold">Recursos</p>
       </button>
-      <button id="tabActividades" onclick="switchTab('actividades')" class="flex flex-col items-center text-gray-400 transition">
+      <button id="tabActividades" onclick="switchTab('actividades')" aria-selected="false" class="flex flex-col items-center text-gray-400 transition">
         <span class="text-2xl">📝</span>
         <p class="text-xs font-semibold">Actividades</p>
       </button>
@@ -161,18 +167,22 @@
   </div>
 
   <!-- ==================== 7. PANTALLA DEL QUIZ INTERACTIVO (TOTALMENTE AUTOMÁTICO) ==================== -->
-  <div id="quiz-screen" class="absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-50 flex flex-col">
+  <div id="quiz-screen" class="app-view absolute inset-0 bg-white hidden opacity-0 transition-opacity duration-700 z-50 flex flex-col">
     <!-- Header del Quiz -->
     <div class="flex items-center justify-between px-6 py-4 border-b bg-white">
       <button id="btnExitQuiz" class="text-2xl text-gray-400 hover:text-gray-700 transition">✕</button>
       <div class="flex-1 text-center">
-        <span id="quiz-counter-text" class="text-gray-400 text-xs font-semibold uppercase tracking-widest">Pregunta 1</span>
+        <span id="quiz-counter-text" aria-live="polite" class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Pregunta 1</span>
       </div>
       <div class="w-8"></div>
     </div>
 
     <!-- Área del Quiz -->
-    <div class="flex-1 p-6 bg-white overflow-y-auto flex flex-col justify-between max-w-xl mx-auto w-full">
+      <div class="flex-1 p-6 bg-white overflow-y-auto flex flex-col justify-between max-w-xl mx-auto w-full">
+        <div class="mb-4" aria-label="Progreso de la evaluación">
+          <div class="h-2 bg-sky-100 rounded-full overflow-hidden"><div id="quiz-progress-bar" class="h-full bg-[#2470BB] rounded-full transition-all" style="width: 0%"></div></div>
+          <p class="text-xs text-gray-600 mt-2 text-center">Lee, mira la imagen si aparece y elige una respuesta. El resultado se mostrará con texto.</p>
+        </div>
       <div>
         <!-- Contenedor de Imagen de Referencia (se oculta automáticamente si la pregunta no tiene imagen) -->
         <div id="quiz-image-box" class="w-full h-48 bg-gray-100 rounded-3xl mb-6 overflow-hidden flex items-center justify-center p-2 hidden">
@@ -342,20 +352,24 @@
 
   <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A POSTGRESQL ==================== -->
   <script type="module">
-    import { api, initDbStatusBadge } from "./js/api.js";
-    import { activitiesEngine } from "./js/activities.js";
+    import { api, initDbStatusBadge } from "/js/api.js";
+    import { activitiesEngine } from "/js/activities.js";
 
     // 1. Inicializar indicador visual de conexión a PostgreSQL
     initDbStatusBadge();
 
-    // Preferencias visuales persistentes: el aprendizaje nunca depende del audio.
+    // Preferencias visuales persistentes para una experiencia clara y predecible.
     const accessibilityButtons = document.querySelectorAll('[data-accessibility-toggle]');
     const setAccessibilityMode = (enabled) => {
       document.body.classList.toggle('high-contrast', enabled);
       document.body.classList.toggle('reduce-motion', enabled);
+      document.body.classList.toggle('learning-mode', enabled);
       accessibilityButtons.forEach(button => {
         button.setAttribute('aria-pressed', String(enabled));
-        button.lastElementChild.innerText = enabled ? 'Modo estándar' : 'Accesibilidad';
+        button.lastElementChild.innerText = enabled ? 'Vista estándar' : 'Lectura cómoda';
+        button.title = enabled
+          ? 'Volver a la vista estándar'
+          : 'Aumentar legibilidad, contraste y reducir movimiento';
       });
       localStorage.setItem('singling_accessibility_mode', enabled ? '1' : '0');
     };
@@ -382,6 +396,103 @@
     let currentSubjectName = "";
     let currentUnitId = null;
     let currentUnitTitle = "";
+
+    const APP_VIEW_IDS = ['splash1', 'splash2', 'view-grades', 'view-subjects', 'view-units', 'view-detail', 'quiz-screen', 'quiz-results-screen', 'activity-screen'];
+    const gradeNameFor = (id) => gradesData.find(grade => String(grade.id) === String(id))?.fullName || `Grado ${id}`;
+    const routeFor = {
+      grades: () => '/grados',
+      subjects: (gradeId) => `/grado/${encodeURIComponent(gradeId)}`,
+      units: (gradeId, subjectId) => `/grado/${encodeURIComponent(gradeId)}/materia/${encodeURIComponent(subjectId)}`,
+      unit: (gradeId, subjectId, unitId, tab = 'recursos') =>
+        `/grado/${encodeURIComponent(gradeId)}/materia/${encodeURIComponent(subjectId)}/unidad/${encodeURIComponent(unitId)}?pestana=${encodeURIComponent(tab)}`
+    };
+
+    function setRoute(path, replace = false) {
+      const method = replace ? 'replaceState' : 'pushState';
+      if (`${window.location.pathname}${window.location.search}` !== path) {
+        window.history[method]({ singling: true, path }, '', path);
+      }
+    }
+
+    function showRouteView(viewId) {
+      APP_VIEW_IDS.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.classList.add('hidden');
+        element.classList.remove('opacity-100');
+        element.classList.add('opacity-0');
+      });
+      const target = document.getElementById(viewId);
+      if (target) {
+        target.classList.remove('hidden', 'opacity-0');
+        target.classList.add('opacity-100');
+      }
+    }
+
+    async function restoreRoute() {
+      const parts = window.location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+      const tab = new URLSearchParams(window.location.search).get('pestana') === 'actividades' ? 'actividades' : 'recursos';
+
+      try {
+        if (parts.length === 0 || (parts.length === 1 && parts[0] === 'index.html')) {
+          showRouteView('splash2');
+          return;
+        }
+        if (parts[0] === 'grados' && parts.length === 1) {
+          showRouteView('view-grades');
+          renderGrades({ updateUrl: false, skipNavigation: true });
+          return;
+        }
+        if (parts[0] !== 'grado' || !parts[1]) throw new Error('Ruta no reconocida');
+
+        const gradeId = parts[1];
+        const gradeName = gradeNameFor(gradeId);
+        if (parts.length === 2) {
+          showRouteView('view-subjects');
+          await loadSubjects(gradeId, gradeName, { updateUrl: false, skipNavigation: true });
+          return;
+        }
+        if (parts[2] !== 'materia' || !parts[3]) throw new Error('Materia no encontrada');
+
+        const subjectId = parts[3];
+        const subjects = await api.getMaterias(gradeId);
+        const subjectName = subjects.find(subject => String(subject.id) === String(subjectId))?.nombre || 'Materia';
+        if (parts.length === 4) {
+          showRouteView('view-units');
+          await loadUnits(subjectId, subjectName, { updateUrl: false, skipNavigation: true, gradeId, gradeName });
+          return;
+        }
+        if (parts[4] !== 'unidad' || !parts[5]) throw new Error('Unidad no encontrada');
+
+        const unitId = parts[5];
+        const units = await api.getUnidades(subjectId);
+        const unitTitle = units.find(unit => String(unit.id) === String(unitId))?.titulo || 'Unidad de aprendizaje';
+        currentGradeId = gradeId;
+        currentGradeName = gradeName;
+        currentSubjectId = subjectId;
+        currentSubjectName = subjectName;
+        showRouteView('view-detail');
+        openUnit(unitId, unitTitle, tab, { updateUrl: false, skipNavigation: true });
+      } catch (error) {
+        console.warn('No se pudo restaurar la ruta solicitada:', error);
+        showRouteView('view-grades');
+        renderGrades({ updateUrl: false, skipNavigation: true });
+      }
+    }
+
+    window.backToGrades = () => {
+      showRouteView('view-grades');
+      renderGrades({ updateUrl: true, skipNavigation: true });
+    };
+    window.backToSubjects = () => {
+      showRouteView('view-subjects');
+      loadSubjects(currentGradeId, currentGradeName, { updateUrl: true, skipNavigation: true });
+    };
+    window.backToUnits = () => {
+      showRouteView('view-units');
+      loadUnits(currentSubjectId, currentSubjectName, { updateUrl: true, skipNavigation: true });
+    };
+    window.addEventListener('popstate', restoreRoute);
 
     // 4. Variables del Motor de Quiz (Se llena automáticamente de PostgreSQL)
     let unitQuestions = [];
@@ -410,30 +521,32 @@
     };
 
     // 6. Renderizar Grados
-    window.renderGrades = () => {
+    window.renderGrades = ({ updateUrl = true, skipNavigation = false } = {}) => {
       const container = document.getElementById('lista-grados');
       container.innerHTML = '';
       gradesData.forEach(g => {
         const isHighlight = g.highlighted ? 'border-l-4 border-[#2470BB]' : '';
         container.innerHTML += `
-          <div onclick="loadSubjects('${g.id}', '${g.fullName}')" class="flex items-center gap-4 p-4 bg-white shadow-md rounded-[10px] cursor-pointer transition hover:-translate-y-1 active:scale-95 ${isHighlight}">
+          <button type="button" onclick="loadSubjects('${g.id}', '${g.fullName}')" aria-label="Abrir ${g.fullName}" class="w-full text-left flex items-center gap-4 p-4 bg-white shadow-md rounded-[10px] cursor-pointer transition hover:-translate-y-1 active:scale-95 ${isHighlight} focus-visible-ring">
             <img src="img/grado6.jpg" class="w-[70px] rounded-[10px] object-cover" />
             <div class="flex-1">
               <p class="font-bold text-xl ${g.highlighted ? 'text-[#2470BB]' : 'text-gray-800'}">${g.name}</p>
               <p class="text-xs text-gray-500">${g.desc}</p>
             </div>
             <span class="text-sky-400 font-bold text-lg">→</span>
-          </div>`;
+          </button>`;
       });
-      navigate('splash2', 'view-grades');
+      if (updateUrl) setRoute(routeFor.grades());
+      if (!skipNavigation) navigate('splash2', 'view-grades');
     };
 
     // 7. Cargar Materias dinámicas desde PostgreSQL
-    window.loadSubjects = async (gradeId, gradeFullName) => {
+    window.loadSubjects = async (gradeId, gradeFullName, { updateUrl = true, skipNavigation = false } = {}) => {
       currentGradeId = gradeId;
       currentGradeName = gradeFullName;
       document.getElementById('subtitulo-grado').innerText = gradeFullName;
-      navigate('view-grades', 'view-subjects');
+      if (updateUrl) setRoute(routeFor.subjects(gradeId));
+      if (!skipNavigation) navigate('view-grades', 'view-subjects');
 
       const container = document.getElementById('lista-materias');
       container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando materias desde PostgreSQL...</div>';
@@ -453,11 +566,11 @@
 
         materias.forEach(doc => {
           container.innerHTML += `
-            <div onclick="loadUnits('${doc.id}', '${doc.nombre}')" class="bg-white p-5 rounded-2xl shadow border-b-4 border-sky-400 text-center hover:bg-sky-50 transition cursor-pointer active:scale-95">
+            <button type="button" onclick="loadUnits('${doc.id}', '${doc.nombre}')" aria-label="Ver unidades de ${doc.nombre}" class="bg-white p-5 rounded-2xl shadow border-b-4 border-sky-400 text-center hover:bg-sky-50 transition cursor-pointer active:scale-95 focus-visible-ring">
               <div class="text-3xl mb-2">📚</div>
               <span class="font-bold text-base text-gray-800 block">${doc.nombre}</span>
               <span class="text-xs text-sky-500 font-semibold mt-1 inline-block">Ver unidades</span>
-            </div>`;
+            </button>`;
         });
       } catch (err) {
         console.error("Error al cargar materias:", err);
@@ -466,11 +579,14 @@
     };
 
     // 8. Cargar Unidades dinámicas desde PostgreSQL
-    window.loadUnits = async (subjectId, subjectName) => {
+    window.loadUnits = async (subjectId, subjectName, { updateUrl = true, skipNavigation = false, gradeId, gradeName } = {}) => {
+      if (gradeId) currentGradeId = gradeId;
+      if (gradeName) currentGradeName = gradeName;
       currentSubjectId = subjectId;
       currentSubjectName = subjectName;
       document.getElementById('titulo-materia-unidades').innerText = `${currentGradeName} - ${subjectName}`;
-      navigate('view-subjects', 'view-units');
+      if (updateUrl) setRoute(routeFor.units(currentGradeId, subjectId));
+      if (!skipNavigation) navigate('view-subjects', 'view-units');
 
       const container = document.getElementById('lista-unidades');
       container.innerHTML = '<div class="text-center py-10 text-gray-400">Cargando unidades desde PostgreSQL...</div>';
@@ -492,7 +608,7 @@
         unidades.forEach(doc => {
           const unitImg = idx === 1 ? 'img/6unidad/mapa1.jpg' : (idx === 2 ? 'img/6unidad/familia.jpg' : 'img/6unidad/feriados.jpg');
           container.innerHTML += `
-            <div onclick="openUnit('${doc.id}', '${doc.titulo}')" class="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transition active:scale-95 duration-300 hover:shadow-xl">
+            <button type="button" onclick="openUnit('${doc.id}', '${doc.titulo}')" aria-label="Abrir unidad ${doc.titulo}" class="w-full text-left bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transition active:scale-95 duration-300 hover:shadow-xl focus-visible-ring">
               <div class="h-44 bg-blue-100 flex items-center justify-center">
                 <img src="${unitImg}" class="h-32 object-contain" onerror="this.src='img/grado6.jpg'" />
               </div>
@@ -503,7 +619,7 @@
                 </div>
                 <span class="text-sky-400 font-bold text-xl">→</span>
               </div>
-            </div>`;
+            </button>`;
           idx++;
         });
       } catch (err) {
@@ -513,12 +629,13 @@
     };
 
     // 9. Abrir Detalle de la Unidad
-    window.openUnit = (id, title) => {
+    window.openUnit = (id, title, tab = 'recursos', { updateUrl = true, skipNavigation = false } = {}) => {
       currentUnitId = id;
       currentUnitTitle = title;
       document.getElementById('breadcrumb-unidad').innerText = title;
-      navigate('view-units', 'view-detail');
-      switchTab('recursos');
+      if (updateUrl) setRoute(routeFor.unit(currentGradeId, currentSubjectId, id, tab));
+      if (!skipNavigation) navigate('view-units', 'view-detail');
+      switchTab(tab, { updateUrl: false });
     };
 
     // 10. Alternar Pestañas Recursos y Actividades
@@ -530,17 +647,21 @@
       nivelActual: 1,
       actividadesCompletadas: []
     };
-    let currentFilter = 'all';
+    // Se prioriza una lista corta y adecuada al nivel para reducir carga cognitiva.
+    let currentFilter = 'recommended';
 
     // 10. Alternar Pestañas Recursos y Actividades
-    window.switchTab = async (tab) => {
+    window.switchTab = async (tab, { updateUrl = true } = {}) => {
       const content = document.getElementById('unit-content');
       const btnRec = document.getElementById('tabRecursos');
       const btnAct = document.getElementById('tabActividades');
+      if (updateUrl && currentUnitId) setRoute(routeFor.unit(currentGradeId, currentSubjectId, currentUnitId, tab));
 
       if (tab === 'recursos') {
         btnRec.className = "flex flex-col items-center text-[#2470BB] transition";
         btnAct.className = "flex flex-col items-center text-gray-400 transition";
+        btnRec.setAttribute('aria-selected', 'true');
+        btnAct.setAttribute('aria-selected', 'false');
 
         content.innerHTML = `
           <h1 class="text-2xl sm:text-3xl font-bold text-[#2470BB] mb-1">Recursos didácticos</h1>
@@ -588,6 +709,8 @@
         // ==================== PESTAÑA ACTIVIDADES Y AUTOAPRENDIZAJE ADAPTATIVO ====================
         btnAct.className = "flex flex-col items-center text-[#2470BB] transition";
         btnRec.className = "flex flex-col items-center text-gray-400 transition";
+        btnAct.setAttribute('aria-selected', 'true');
+        btnRec.setAttribute('aria-selected', 'false');
 
         content.innerHTML = `
           <div class="max-w-3xl mx-auto space-y-6 pb-8">
@@ -700,7 +823,8 @@
       ];
 
       // Fusionar actividades de BD con las estándar
-      const activitiesList = defaultStandard.map(std => {
+      const activitiesList = [
+        ...defaultStandard.map(std => {
         const found = unitActivities.find(a => a.tipo === std.tipo);
         return {
           ...std,
@@ -710,6 +834,19 @@
           puntosRecompensa: found?.puntosRecompensa || std.puntosRecompensa,
           titulo: found?.titulo || std.titulo
         };
+        }),
+        // También mostramos actividades personalizadas creadas por el docente.
+        ...unitActivities.filter(activity => !defaultStandard.some(std => std.tipo === activity.tipo))
+      ];
+
+      const completedActivities = new Set(p.actividadesCompletadas || []);
+      const recommendedActivity = activitiesList.find(activity => {
+        const required = activity.aciertosRequeridos || 0;
+        const unlocked = aciertos >= required || nivel >= activity.nivelDificultad;
+        return unlocked && !completedActivities.has(activity.tipo);
+      }) || activitiesList.find(activity => {
+        const required = activity.aciertosRequeridos || 0;
+        return aciertos >= required || nivel >= activity.nivelDificultad;
       });
 
       // Filtrar actividades según pestaña activa
@@ -765,13 +902,22 @@
               <p class="leading-relaxed flex-1 font-medium">${tutorMsg}</p>
             </div>
 
+            <div class="bg-white text-slate-800 p-3 rounded-2xl border border-white/70 flex items-center gap-3 shadow-sm">
+              <span class="w-9 h-9 rounded-xl bg-sky-100 text-[#2470BB] flex items-center justify-center shrink-0">${recommendedActivity ? '▶' : '✓'}</span>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase tracking-wider text-sky-700">Siguiente paso recomendado</p>
+                <p class="text-xs sm:text-sm font-bold truncate">${recommendedActivity ? recommendedActivity.titulo : '¡Has completado la ruta disponible!'}</p>
+              </div>
+            </div>
+            <p class="text-[11px] text-white/95 font-medium flex items-center gap-2"><span aria-hidden="true">👁️</span> Todas las instrucciones, pistas y resultados se muestran claramente en pantalla.</p>
+
           </div>
         </div>
 
         <!-- Filtros Rápidos por Nivel de Dificultad -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button onclick="window.setActivityFilter('all')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === 'all' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
-            Todas (5)
+            Todas (${activitiesList.length})
           </button>
           <button onclick="window.setActivityFilter('recommended')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${currentFilter === 'recommended' ? 'bg-[#2470BB] text-white shadow-xs' : 'bg-white text-gray-600 hover:bg-gray-100 border'}">
             🎯 Recomendadas
@@ -812,9 +958,10 @@
           levelLabel = '🏆 Nivel 3';
         }
 
+        const isCompleted = completedActivities.has(act.tipo);
         if (isUnlocked) {
           return `
-            <div onclick="window.launchActivity('${act.tipo}')" class="p-4 sm:p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-sky-300 transition duration-200 cursor-pointer flex flex-col justify-between group active:scale-98">
+            <button type="button" onclick="window.launchActivity('${act.tipo}')" aria-label="Abrir ${act.titulo}${isCompleted ? ', completada' : ''}" class="text-left p-4 sm:p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-sky-300 transition duration-200 cursor-pointer flex flex-col justify-between group active:scale-98 focus-visible-ring">
               <div>
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-2">
@@ -826,8 +973,8 @@
                       <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 ml-1">+${act.puntosRecompensa || 10} XP</span>
                     </div>
                   </div>
-                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
-                    <i class="fa-solid fa-lock-open text-[9px]"></i> Desbloqueada
+                  <span class="text-[10px] font-bold ${isCompleted ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'} px-2 py-0.5 rounded-full flex items-center gap-1 border">
+                    <i class="fa-solid ${isCompleted ? 'fa-circle-check' : 'fa-lock-open'} text-[9px]"></i> ${isCompleted ? 'Completada' : 'Lista para jugar'}
                   </span>
                 </div>
                 <h4 class="font-bold text-gray-800 text-base group-hover:text-[#2470BB] transition">${act.titulo}</h4>
@@ -843,7 +990,7 @@
                   <i class="fa-solid fa-play text-[10px]"></i>
                 </span>
               </div>
-            </div>
+            </button>
           `;
         } else {
           return `
@@ -897,24 +1044,24 @@
               </span>
             </div>
 
-            <div id="start-unit1-test" onclick="window.startQuiz()" class="flex items-center gap-4 p-4 sm:p-5 bg-white shadow-sm rounded-3xl border-b-4 border-sky-400 cursor-pointer transition hover:shadow-md hover:bg-slate-50 active:scale-98 duration-200">
+            <button type="button" id="start-unit1-test" onclick="window.startQuiz()" aria-label="Iniciar evaluación interactiva de ${currentUnitTitle}" class="w-full text-left flex items-center gap-4 p-4 sm:p-5 bg-white shadow-sm rounded-3xl border-b-4 border-sky-400 cursor-pointer transition hover:shadow-md hover:bg-slate-50 active:scale-98 duration-200 focus-visible-ring">
               <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-sky-400 to-[#2470BB] text-white rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-sm shrink-0">
                 <i class="fa-solid fa-dice"></i>
               </div>
               <div class="flex-1">
                 <h4 class="font-bold text-gray-800 text-sm sm:text-base leading-snug">${currentUnitTitle} - Test Interactivo</h4>
                 <p class="text-xs text-sky-600 font-semibold mt-0.5">
-                  Calificación automática con semáforo inteligente de desempeño
+                  Resultado claro al finalizar: dominado, en práctica o por reforzar
                 </p>
                 <p class="text-[11px] text-gray-400 mt-0.5">
                   Banco de ${totalInDb} preguntas registradas en PostgreSQL
                 </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <div id="status-dot" class="w-4 h-4 rounded-full bg-gray-200" title="Pendiente"></div>
+                <div class="text-right"><div id="status-dot" class="w-3 h-3 rounded-full bg-gray-200 ml-auto" title="Pendiente"></div><span id="status-text" class="text-[10px] text-gray-500 font-bold">Pendiente</span></div>
                 <span class="text-sky-500 font-bold text-lg sm:text-xl">→</span>
               </div>
-            </div>
+            </button>
           </div>
         `;
       }
@@ -1091,7 +1238,16 @@
       }, 300);
     };
 
-    window.closeActivityScreen = () => {
+    window.closeActivityScreen = async () => {
+      // Esperar el último guardado de progreso evita que el panel se renderice
+      // con datos anteriores justo después de completar una actividad.
+      try {
+        await window._activityProgressPromise;
+      } catch (_) {
+        // El modo local de respaldo seguirá mostrando la actividad jugable.
+      } finally {
+        window._activityProgressPromise = null;
+      }
       const actScreen = document.getElementById('activity-modal-screen');
       const detailScreen = document.getElementById('view-detail');
       actScreen.classList.replace('opacity-100', 'opacity-0');
@@ -1156,6 +1312,8 @@
       if (!data) return;
 
       document.getElementById('quiz-counter-text').innerText = `Pregunta ${index + 1} de ${quizData.length}`;
+      const progressBar = document.getElementById('quiz-progress-bar');
+      if (progressBar) progressBar.style.width = `${Math.round((index / quizData.length) * 100)}%`;
       document.getElementById('quiz-question').innerText = data.type === "drag-and-drop" ? "Lee y completa la frase correctamente:" : data.question;
 
       // Imagen de referencia (se muestra solo si la pregunta tiene imagen definida)
@@ -1179,11 +1337,6 @@
         const cleanText = data.question.includes("______") ? data.question : data.question.replace(/\[box\]/g, "______");
         
         sentence.innerHTML = `
-          <div class="flex items-center justify-center gap-2 mb-2">
-            <button onclick="window.activitiesEngine.speak('${cleanText.replace('______', data.correct)}')" class="text-xs font-bold text-sky-600 bg-sky-100 hover:bg-sky-200 px-3 py-1 rounded-xl transition flex items-center gap-1">
-              <i class="fa-solid fa-volume-high"></i> Escuchar frase
-            </button>
-          </div>
           <div>${cleanText.replace("______", `<span id="drop-target" class="inline-flex items-center justify-center min-w-[120px] min-h-[42px] px-3 py-1 border-2 border-dashed border-sky-400 bg-sky-50 text-sky-700 font-bold rounded-xl transition-all cursor-pointer mx-1.5">Arrastra aquí</span>`)}</div>
         `;
         optionsContainer.appendChild(sentence);
@@ -1339,21 +1492,25 @@
     window.updateUnitCardStatus = (score, total, percentage) => {
       const testCard = document.getElementById('start-unit1-test');
       const dot = document.getElementById('status-dot');
-      if (testCard && dot) {
-        testCard.className = "flex items-center gap-4 p-5 shadow-md rounded-2xl border-b-4 cursor-pointer transition active:scale-95 duration-500";
+      const statusText = document.getElementById('status-text');
+      if (testCard && dot && statusText) {
+        testCard.className = "w-full text-left flex items-center gap-4 p-4 sm:p-5 shadow-md rounded-3xl border-b-4 cursor-pointer transition active:scale-95 duration-500 focus-visible-ring";
 
         if (percentage >= 80) {
           testCard.classList.add('bg-green-50', 'border-green-500');
-          dot.className = "w-4 h-4 rounded-full bg-green-500";
+          dot.className = "w-3 h-3 rounded-full bg-green-500 ml-auto";
           dot.title = `Dominado (${score}/${total} - ${percentage}%)`;
+          statusText.innerText = 'Dominado';
         } else if (percentage >= 50) {
           testCard.classList.add('bg-yellow-50', 'border-yellow-500');
-          dot.className = "w-4 h-4 rounded-full bg-yellow-500";
+          dot.className = "w-3 h-3 rounded-full bg-yellow-500 ml-auto";
           dot.title = `Requiere práctica (${score}/${total} - ${percentage}%)`;
+          statusText.innerText = 'En práctica';
         } else {
           testCard.classList.add('bg-red-50', 'border-red-500');
-          dot.className = "w-4 h-4 rounded-full bg-red-500";
+          dot.className = "w-3 h-3 rounded-full bg-red-500 ml-auto";
           dot.title = `Refuerzo necesario (${score}/${total} - ${percentage}%)`;
+          statusText.innerText = 'Por reforzar';
         }
       }
     };
@@ -1499,21 +1656,27 @@
       }
     };
 
-    // 12. Listeners de Inicio
-    document.getElementById('btnEmpezar').onclick = renderGrades;
-
-    setTimeout(() => {
-      const s1 = document.getElementById('splash1');
-      const s2 = document.getElementById('splash2');
-      if (s1 && s2) {
-        s1.classList.add('opacity-0');
-        setTimeout(() => {
-          s1.classList.add('hidden');
-          s2.classList.remove('hidden');
-          setTimeout(() => s2.classList.add('opacity-100'), 50);
-        }, 1000);
-      }
-    }, 1500);
+    // 12. Inicio: la ruta decide si se muestra bienvenida o se restaura el contexto.
+    document.getElementById('btnEmpezar').onclick = () => renderGrades();
+    const openedRoute = window.location.pathname !== '/' || window.location.search;
+    if (openedRoute) {
+      // No reproducimos la bienvenida al actualizar una unidad, materia o actividad.
+      restoreRoute();
+    } else {
+      window.history.replaceState({ singling: true, path: '/' }, '', '/');
+      setTimeout(() => {
+        const s1 = document.getElementById('splash1');
+        const s2 = document.getElementById('splash2');
+        if (s1 && s2) {
+          s1.classList.add('opacity-0');
+          setTimeout(() => {
+            s1.classList.add('hidden');
+            s2.classList.remove('hidden');
+            setTimeout(() => s2.classList.add('opacity-100'), 50);
+          }, 1000);
+        }
+      }, 1500);
+    }
   </script>
 </body>
 </html>

@@ -29,14 +29,30 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middlewares con límite ampliado para imágenes HD optimizadas
-const allowedOrigins = (process.env.CORS_ORIGINS || '')
-  .split(',').map(origin => origin.trim()).filter(Boolean);
+// Middlewares con límite ampliado para imágenes HD optimizadas.
+// Al abrir el frontend desde el mismo servidor, el navegador puede enviar el
+// Origin de localhost. Por eso los orígenes locales del propio servidor se
+// permiten siempre; los orígenes adicionales se declaran en CORS_ORIGINS.
+const configuredOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+const localOrigins = new Set([
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
+  // Puertos habituales de servidores de desarrollo (VS Code Live Server y Vite).
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+]);
+const allowedOrigins = new Set([...localOrigins, ...configuredOrigins]);
 app.use(cors({
   origin(origin, callback) {
     // Las páginas servidas por esta misma aplicación no envían Origin.
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origen no autorizado'));
+    const normalizedOrigin = origin?.replace(/\/$/, '');
+    if (!normalizedOrigin || allowedOrigins.has(normalizedOrigin)) return callback(null, true);
+    return callback(new Error(`Origen no autorizado: ${origin}. Añádelo a CORS_ORIGINS.`));
   }
 }));
 app.use(express.json({ limit: '25mb' }));
@@ -937,6 +953,14 @@ app.get('/api/intentos', async (req, res) => {
       res.status(500).json({ error: 'Error al consultar intentos', details: err2.message });
     }
   }
+});
+
+// Rutas del portal del estudiante. Al actualizar una URL como
+// /grado/6/materia/1/unidad/3, Express devuelve la aplicación y el cliente
+// restaura esa vista. Las rutas /api ya fueron atendidas antes de este fallback.
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  return res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Iniciar servidor HTTP
