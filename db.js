@@ -93,6 +93,13 @@ export function convertPlaceholders(sql) {
   return sql.replace(/\?/g, () => `$${paramIndex++}`);
 }
 
+// Identificador anónimo persistente del alumno. No contiene datos personales y
+// permite separar el progreso cuando la plataforma se usa sin inicio de sesión.
+export function normalizeStudentId(value) {
+  const studentId = String(value || '').trim();
+  return /^[A-Za-z0-9_-]{8,80}$/.test(studentId) ? studentId : null;
+}
+
 // ==============================================================================
 // FUNCIÓN UNIVERSAL DE CONSULTA (query)
 // Compatible con consultas directas, arrays de filas y .insertId
@@ -223,5 +230,6 @@ export default {
   getConnection,
   testConnection,
   convertPlaceholders,
+  normalizeStudentId,
   dbConfig
 };

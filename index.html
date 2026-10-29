@@ -22,6 +22,15 @@
     }
     .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
     .animate-shake { animation: shake 0.4s ease-in-out; }
+    .focus-visible-ring:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid #f59e0b; outline-offset: 3px;
+    }
+    body.high-contrast { background: #fff; color: #111827; }
+    body.high-contrast .bg-gray-50 { background: #f8fafc !important; }
+    body.high-contrast .text-gray-400 { color: #374151 !important; }
+    body.high-contrast .text-gray-500 { color: #1f2937 !important; }
+    body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
   </style>
 </head>
 
@@ -36,7 +45,10 @@
 
   <!-- ==================== 2. SPLASH SCREEN 2 (BIENVENIDA) ==================== -->
   <div id="splash2" class="absolute inset-0 flex flex-col items-center justify-center text-center opacity-0 hidden transition-opacity duration-1000 p-6 bg-white z-10">
-    <div class="absolute top-4 right-4">
+    <div class="absolute top-4 right-4 flex items-center gap-2">
+      <button data-accessibility-toggle type="button" aria-pressed="false" title="Mejorar contraste y reducir movimiento" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 rounded-xl text-xs font-bold hover:bg-amber-100 transition">
+        <i class="fa-solid fa-universal-access"></i><span>Modo claro</span>
+      </button>
       <a href="admin.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#2470BB] rounded-xl text-xs font-bold hover:bg-blue-100 transition">
         <i class="fa-solid fa-user-gear"></i>
         <span>Panel Docente</span>
@@ -318,12 +330,15 @@
   </div>
 
   <!-- Toast flotante de racha / acierto -->
-  <div id="streak-floating-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[80] pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
+  <div id="streak-floating-toast" role="status" aria-live="polite" class="fixed top-5 left-1/2 -translate-x-1/2 z-[80] pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
     <div class="bg-gray-900/90 backdrop-blur-sm text-white px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold border border-white/10">
       <span id="streak-toast-icon">🔥</span>
       <span id="streak-toast-text">+1 Acierto</span>
     </div>
   </div>
+  <button data-accessibility-toggle type="button" aria-pressed="false" title="Modo de alto contraste y menos movimiento" class="fixed bottom-4 left-4 z-[90] inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-md hover:bg-amber-200 transition">
+    <i class="fa-solid fa-universal-access"></i><span>Accesibilidad</span>
+  </button>
 
   <!-- ==================== LÓGICA AUTOMÁTICA CONECTADA A POSTGRESQL ==================== -->
   <script type="module">
@@ -332,6 +347,22 @@
 
     // 1. Inicializar indicador visual de conexión a PostgreSQL
     initDbStatusBadge();
+
+    // Preferencias visuales persistentes: el aprendizaje nunca depende del audio.
+    const accessibilityButtons = document.querySelectorAll('[data-accessibility-toggle]');
+    const setAccessibilityMode = (enabled) => {
+      document.body.classList.toggle('high-contrast', enabled);
+      document.body.classList.toggle('reduce-motion', enabled);
+      accessibilityButtons.forEach(button => {
+        button.setAttribute('aria-pressed', String(enabled));
+        button.lastElementChild.innerText = enabled ? 'Modo estándar' : 'Accesibilidad';
+      });
+      localStorage.setItem('singling_accessibility_mode', enabled ? '1' : '0');
+    };
+    setAccessibilityMode(localStorage.getItem('singling_accessibility_mode') === '1');
+    accessibilityButtons.forEach(button => button.addEventListener('click', () => {
+      setAccessibilityMode(!document.body.classList.contains('high-contrast'));
+    }));
 
     // 2. Grados de Educación General Básica
     const gradesData = [
@@ -925,8 +956,8 @@
           completada: isCompleted
         });
 
-        if (res && res.progreso) {
-          studentProgress = res.progreso;
+        if (res && res.success) {
+          studentProgress = res;
 
           // Actualizar insignia flotante de racha en el encabezado del juego
           const liveStreak = document.getElementById('activity-live-streak-count');

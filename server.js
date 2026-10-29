@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import fs from 'fs';
-import { pool, query, testConnection, dbConfig } from './db.js';
+import { pool, query, testConnection, dbConfig, normalizeStudentId } from './db.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -20,18 +20,64 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 // Middlewares con límite ampliado para imágenes HD optimizadas
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',').map(origin => origin.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    // Las páginas servidas por esta misma aplicación no envían Origin.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origen no autorizado'));
+  }
+}));
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
 // Servir archivos estáticos del frontend (HTML, CSS, JS, Imágenes)
 app.use(express.static(__dirname));
 
+const MAX_TEXT_LENGTH = 5000;
+const safeText = (value, maxLength = MAX_TEXT_LENGTH) => String(value ?? '').trim().slice(0, maxLength);
+const safeId = (value) => {
+  const id = Number.parseInt(value, 10);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+};
+const isSafeResourceUrl = (value, allowImageData = false) => {
+  const url = safeText(value, 2000);
+  if (!url) return false;
+  if (allowImageData && /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(url)) return true;
+  if (/^(https?:\/\/|\/|\.\/|\.\.\/|img\/)/i.test(url)) return true;
+  return false;
+};
+
+function requireAdmin(req, res, next) {
+  const expectedKey = process.env.ADMIN_API_KEY;
+  if (!expectedKey || req.get('x-admin-key') === expectedKey) return next();
+  return res.status(401).json({ error: 'Acceso docente no autorizado' });
+}
+
+async function ensureProgressProfileColumn() {
+  try {
+    await query('ALTER TABLE progreso_estudiante ADD COLUMN IF NOT EXISTS perfil_id VARCHAR(80)');
+    await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_progreso_perfil_unidad ON progreso_estudiante(perfil_id, unidad_id) WHERE perfil_id IS NOT NULL');
+  } catch (error) {
+    console.warn('ℹ️ No se pudo preparar el progreso por perfil:', error.message);
+  }
+}
+
 // ==============================================================================
 // GESTOR DE SUBIDA Y ALMACENAMIENTO DE IMÁGENES HD OPTIMIZADAS
 // ==============================================================================
-app.post('/api/upload-image', (req, res) => {
+app.post('/api/upload-image', requireAdmin, (req, res) => {
   try {
     const { imageBase64, filename } = req.body;
     if (!imageBase64) {
@@ -44,8 +90,13 @@ app.post('/api/upload-image', (req, res) => {
     }
 
     const extRaw = matches[1].toLowerCase();
-    const ext = extRaw === 'jpeg' ? 'jpg' : (extRaw === 'svg+xml' ? 'svg' : extRaw);
+    const allowedExtensions = { jpeg: 'jpg', jpg: 'jpg', png: 'png', webp: 'webp', gif: 'gif' };
+    const ext = allowedExtensions[extRaw];
+    if (!ext) return res.status(400).json({ error: 'Solo se permiten imágenes PNG, JPG, WEBP o GIF' });
     const buffer = Buffer.from(matches[2], 'base64');
+    if (!buffer.length || buffer.length > 6 * 1024 * 1024) {
+      return res.status(413).json({ error: 'La imagen debe pesar como máximo 6 MB' });
+    }
 
     const uploadsDir = path.join(__dirname, 'img', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
@@ -128,6 +179,8 @@ async function setConfig(key, value) {
 
 // Inicializar tabla si PostgreSQL está disponible
 initConfigTable().catch(() => {});
+const progressSchemaReady = ensureProgressProfileColumn();
+progressSchemaReady.catch(() => {});
 
 // ==============================================================================
 // RUTAS DE LA API REST
@@ -200,7 +253,7 @@ app.get('/api/materias', async (req, res) => {
   }
 });
 
-app.post('/api/materias', async (req, res) => {
+app.post('/api/materias', requireAdmin, async (req, res) => {
   try {
     const { nombre, gradoId, descripcion } = req.body;
     if (!nombre || !gradoId) {
@@ -230,7 +283,7 @@ app.post('/api/materias', async (req, res) => {
   }
 });
 
-app.delete('/api/materias/:id', async (req, res) => {
+app.delete('/api/materias/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM materias WHERE id = ?', [id]);
@@ -284,7 +337,7 @@ app.get('/api/unidades/:id/config', async (req, res) => {
 });
 
 // Guardar configuración de cuántas preguntas aleatorias presentar en una unidad
-app.post('/api/unidades/:id/config', async (req, res) => {
+app.post('/api/unidades/:id/config', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { limitePreguntas } = req.body;
@@ -300,7 +353,7 @@ app.post('/api/unidades/:id/config', async (req, res) => {
   }
 });
 
-app.post('/api/unidades', async (req, res) => {
+app.post('/api/unidades', requireAdmin, async (req, res) => {
   try {
     const { titulo, materiaId, numeroUnidad, descripcion, limitePreguntas } = req.body;
     if (!titulo || !materiaId) {
@@ -333,7 +386,7 @@ app.post('/api/unidades', async (req, res) => {
   }
 });
 
-app.delete('/api/unidades/:id', async (req, res) => {
+app.delete('/api/unidades/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM unidades WHERE id = ?', [id]);
@@ -363,17 +416,20 @@ app.get('/api/recursos', async (req, res) => {
   }
 });
 
-app.post('/api/recursos', async (req, res) => {
+app.post('/api/recursos', requireAdmin, async (req, res) => {
   try {
     const { titulo, tipo, url, unidadId } = req.body;
     if (!titulo || !url || !unidadId) {
       return res.status(400).json({ error: 'Título, URL y unidadId son requeridos' });
     }
+    if (!isSafeResourceUrl(url)) {
+      return res.status(400).json({ error: 'La URL del recurso debe ser una dirección http(s) o una ruta interna válida' });
+    }
 
     const finalTipo = tipo === 'video' ? 'video' : 'pdf';
     const result = await query(
       'INSERT INTO recursos (titulo, tipo, url, unidad_id) VALUES (?, ?, ?, ?) RETURNING id',
-      [titulo.trim(), finalTipo, url.trim(), parseInt(unidadId, 10)]
+      [safeText(titulo, 200), finalTipo, safeText(url, 2000), safeId(unidadId)]
     );
 
     res.status(201).json({
@@ -389,7 +445,7 @@ app.post('/api/recursos', async (req, res) => {
   }
 });
 
-app.delete('/api/recursos/:id', async (req, res) => {
+app.delete('/api/recursos/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM recursos WHERE id = ?', [id]);
@@ -462,7 +518,7 @@ app.get('/api/preguntas', async (req, res) => {
   }
 });
 
-app.post('/api/preguntas', async (req, res) => {
+app.post('/api/preguntas', requireAdmin, async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -475,7 +531,12 @@ app.post('/api/preguntas', async (req, res) => {
     }
 
     const finalTipo = tipo === 'drag-and-drop' || tipo === 'fill' ? 'fill' : 'multiple';
-    const cleanPregunta = pregunta.replace(/\[box\]/g, '______').trim();
+    const cleanPregunta = safeText(pregunta).replace(/\[box\]/g, '______');
+    if (!cleanPregunta || (imagen && !isSafeResourceUrl(imagen, true))) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({ error: 'La pregunta o su imagen no tienen un formato válido' });
+    }
     const finalCategoria = categoria ? parseInt(categoria, 10) : 1;
 
     // 1. Insertar pregunta y obtener id generado
@@ -487,7 +548,12 @@ app.post('/api/preguntas', async (req, res) => {
     const preguntaId = resultPregunta.insertId;
 
     // 2. Insertar opciones
-    const validOptions = (opciones || []).map(o => String(o).trim()).filter(o => o.length > 0);
+    const validOptions = (opciones || []).map(o => safeText(o, 255)).filter(o => o.length > 0).slice(0, 12);
+    if (validOptions.length < 2) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({ error: 'Incluye al menos dos opciones válidas' });
+    }
     const targetCorrect = (correcta || validOptions[0] || '').trim().toLowerCase();
 
     let orden = 1;
@@ -518,7 +584,7 @@ app.post('/api/preguntas', async (req, res) => {
   }
 });
 
-app.delete('/api/preguntas/:id', async (req, res) => {
+app.delete('/api/preguntas/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM preguntas WHERE id = ?', [id]);
@@ -570,7 +636,7 @@ app.get('/api/actividades/:id', async (req, res) => {
   }
 });
 
-app.post('/api/actividades', async (req, res) => {
+app.post('/api/actividades', requireAdmin, async (req, res) => {
   try {
     const { unidadId, tipo, titulo, descripcion, datos, orden, nivelDificultad, aciertosRequeridos, puntosRecompensa } = req.body;
     if (!unidadId || !tipo || !titulo || !datos) {
@@ -606,7 +672,7 @@ app.post('/api/actividades', async (req, res) => {
   }
 });
 
-app.put('/api/actividades/:id', async (req, res) => {
+app.put('/api/actividades/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { titulo, descripcion, datos, activo, orden } = req.body;
@@ -660,7 +726,7 @@ app.put('/api/actividades/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/actividades/:id', async (req, res) => {
+app.delete('/api/actividades/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM actividades_unidad WHERE id = ?', [parseInt(id, 10)]);
@@ -676,15 +742,20 @@ app.delete('/api/actividades/:id', async (req, res) => {
 // ==============================================================================
 app.get('/api/progreso', async (req, res) => {
   try {
-    const { unidadId, usuarioId } = req.query;
+    await progressSchemaReady;
+    const { unidadId, usuarioId, perfilId } = req.query;
     if (!unidadId) {
       return res.status(400).json({ error: 'unidadId es requerido' });
     }
-    const uId = parseInt(unidadId, 10);
-    const userFilter = usuarioId ? parseInt(usuarioId, 10) : null;
+    const uId = safeId(unidadId);
+    const userFilter = safeId(usuarioId);
+    const profileId = normalizeStudentId(perfilId);
+    if (!uId) return res.status(400).json({ error: 'unidadId inválido' });
 
     let rows;
-    if (userFilter) {
+    if (profileId) {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND perfil_id = ? LIMIT 1', [uId, profileId]);
+    } else if (userFilter) {
       rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id = ? LIMIT 1', [uId, userFilter]);
     } else {
       rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id IS NULL LIMIT 1', [uId]);
@@ -723,16 +794,21 @@ app.get('/api/progreso', async (req, res) => {
 
 app.post('/api/progreso/acierto', async (req, res) => {
   try {
-    const { unidadId, usuarioId, tipoActividad, esAcierto, puntos, completada } = req.body;
+    await progressSchemaReady;
+    const { unidadId, usuarioId, perfilId, tipoActividad, esAcierto, completada } = req.body;
     if (!unidadId) {
       return res.status(400).json({ error: 'unidadId es requerido' });
     }
-    const uId = parseInt(unidadId, 10);
-    const userFilter = usuarioId ? parseInt(usuarioId, 10) : null;
+    const uId = safeId(unidadId);
+    const userFilter = safeId(usuarioId);
+    const profileId = normalizeStudentId(perfilId);
+    if (!uId) return res.status(400).json({ error: 'unidadId inválido' });
     const isCorrect = Boolean(esAcierto);
 
     let rows;
-    if (userFilter) {
+    if (profileId) {
+      rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND perfil_id = ? LIMIT 1', [uId, profileId]);
+    } else if (userFilter) {
       rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id = ? LIMIT 1', [uId, userFilter]);
     } else {
       rows = await query('SELECT * FROM progreso_estudiante WHERE unidad_id = ? AND usuario_id IS NULL LIMIT 1', [uId]);
@@ -781,15 +857,16 @@ app.post('/api/progreso/acierto', async (req, res) => {
       );
     } else {
       await query(
-        `INSERT INTO progreso_estudiante (usuario_id, unidad_id, aciertos, racha_actual, racha_maxima, nivel_actual, actividades_completadas) 
-         VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)`,
-        [userFilter, uId, currentAciertos, currentRacha, currentRachaMax, newNivel, jsonCompleted]
+        `INSERT INTO progreso_estudiante (usuario_id, perfil_id, unidad_id, aciertos, racha_actual, racha_maxima, nivel_actual, actividades_completadas)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb)`,
+        [userFilter, profileId, uId, currentAciertos, currentRacha, currentRachaMax, newNivel, jsonCompleted]
       );
     }
 
     res.json({
       success: true,
       unidadId: uId,
+      perfilId: profileId,
       aciertos: currentAciertos,
       rachaActual: currentRacha,
       rachaMaxima: currentRachaMax,
