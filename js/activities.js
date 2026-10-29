@@ -7,22 +7,6 @@
 // 5. El Ahorcado (Hangman Challenge)
 // ==============================================================================
 
-// Helper de síntesis de voz en inglés
-export function speakWord(text) {
-  if (!('speechSynthesis' in window)) return;
-  try {
-    window.speechSynthesis.cancel();
-    const clean = text.replace(/\[box\]/g, '').replace(/______/g, '').trim();
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.warn('SpeechSynthesis error:', e);
-  }
-}
-
 // Helper de confeti (usa canvas-confetti si existe, o fallback nativo con CSS particles)
 export function triggerConfetti() {
   if (typeof window.confetti === 'function') {
@@ -170,10 +154,6 @@ export function renderFillActivity(container, data, onExit) {
             <span class="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">Aciertos: ${correctCount}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-audio-fill" class="px-3 py-1.5 bg-blue-50 text-[#2470BB] hover:bg-blue-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-              <i class="fa-solid fa-volume-high"></i>
-              <span>Escuchar</span>
-            </button>
             <button id="btn-hint-fill" class="px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
               <i class="fa-solid fa-lightbulb"></i>
               <span>Pista</span>
@@ -245,20 +225,12 @@ export function renderFillActivity(container, data, onExit) {
     const slotRemoveBtn = document.getElementById('slot-remove-btn');
     const optionsBank = document.getElementById('fill-options-bank');
     const checkBtn = document.getElementById('btn-check-fill');
-    const audioBtn = document.getElementById('btn-audio-fill');
     const hintBtn = document.getElementById('btn-hint-fill');
     const hintBox = document.getElementById('fill-hint-box');
     const feedback = document.getElementById('fill-feedback');
     const backBtn = document.getElementById('btn-fill-back');
 
     if (backBtn) backBtn.onclick = onExit;
-
-    if (audioBtn) {
-      audioBtn.onclick = () => {
-        const fullText = item.sentence.replace(/\[box\]|______/g, selectedWord || item.correct);
-        speakWord(fullText);
-      };
-    }
 
     if (hintBtn && hintBox) {
       hintBtn.onclick = () => hintBox.classList.toggle('hidden');
@@ -383,7 +355,6 @@ export function renderFillActivity(container, data, onExit) {
         feedback.className = 'text-sm font-bold py-3.5 px-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200';
         feedback.innerHTML = `🎉 ¡Correcto! "${item.sentence.replace(/\[box\]|______/g, item.correct)}"`;
         triggerConfetti();
-        speakWord(item.sentence.replace(/\[box\]|______/g, item.correct));
       } else {
         slot.className = "fill-drop-slot relative inline-flex items-center justify-center min-w-[150px] md:min-w-[190px] min-h-[48px] px-4 py-1.5 rounded-2xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-black text-lg md:text-xl shadow-xs animate-shake uppercase tracking-wide";
         slotRemoveBtn.classList.add('hidden');
@@ -601,7 +572,6 @@ export function renderMemoramaActivity(container, data, onExit) {
     cardEl.classList.add('flipped');
     const inner = cardEl.querySelector('.card-inner');
     inner.classList.add('rotate-y-180');
-    speakWord(cardData.word);
 
     flippedCards.push({ el: cardEl, data: cardData });
 
@@ -646,6 +616,11 @@ export function renderMemoramaActivity(container, data, onExit) {
   }
 
   function showMemoVictory() {
+    // El tablero ya terminó: guardar la actividad como completada para que la
+    // ruta de autoaprendizaje la identifique al volver al panel.
+    if (typeof window.reportActivityProgress === 'function') {
+      window._activityProgressPromise = window.reportActivityProgress('memorama', true, true);
+    }
     triggerConfetti();
     const m = String(Math.floor(seconds / 60)).padStart(2, '0');
     const s = String(seconds % 60).padStart(2, '0');
@@ -1073,9 +1048,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
             ${activeWord.clue}
           </span>
           <span class="text-xs text-sky-200 font-semibold shrink-0">(${activeWord.word.length} letras)</span>
-          <button id="btn-audio-active-clue" class="text-white/80 hover:text-white text-sm p-1 cursor-pointer shrink-0 ml-1" title="Escuchar pista en inglés">
-            <i class="fa-solid fa-volume-high"></i>
-          </button>
         </div>
 
         <button id="btn-next-clue" class="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition cursor-pointer shrink-0" title="Pista siguiente (o Enter/Tab)">
@@ -1195,7 +1167,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
   const clearBtn = document.getElementById('btn-clear-cw');
   const prevClueBtn = document.getElementById('btn-prev-clue');
   const nextClueBtn = document.getElementById('btn-next-clue');
-  const audioActiveClueBtn = document.getElementById('btn-audio-active-clue');
   const activeBadge = document.getElementById('cw-active-badge');
   const activeClueText = document.getElementById('cw-active-clue-text');
   const clueBannerCenter = document.getElementById('cw-clue-banner-center');
@@ -1425,9 +1396,7 @@ export function renderCrucigramaActivity(container, data, onExit) {
         clueItem.classList.add('line-through', 'opacity-70');
       }
 
-      // Sonido de pronunciación y feedback auditivo
       if (typeof window.reportActivityProgress === 'function') window.reportActivityProgress('crucigrama', true, solvedWordsSet.size === words.length);
-      speakWord(w.word);
 
       // Actualizar contador
       const badge = document.getElementById('cw-solved-badge');
@@ -1507,7 +1476,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
     activeCellKey = `${nextWord.row}-${nextWord.col}`;
     updateBoardUI();
     moveToCell(nextWord.row, nextWord.col);
-    speakWord(nextWord.clue);
   }
 
   // Navegación de pistas
@@ -1527,13 +1495,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
     };
   }
 
-  if (audioActiveClueBtn) {
-    audioActiveClueBtn.onclick = (e) => {
-      e.stopPropagation();
-      speakWord(activeWord.clue);
-    };
-  }
-
   // Clic en pistas de la barra lateral
   container.querySelectorAll('.cw-clue-item').forEach(clueEl => {
     clueEl.onclick = () => {
@@ -1545,7 +1506,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
         activeCellKey = `${w.row}-${w.col}`;
         updateBoardUI();
         moveToCell(w.row, w.col);
-        speakWord(w.clue);
       }
     };
   });
@@ -1594,7 +1554,6 @@ export function renderCrucigramaActivity(container, data, onExit) {
           targetInput.value = correct;
           targetInput.classList.remove('text-rose-600', 'bg-rose-50');
           targetInput.classList.add('text-amber-600', 'bg-amber-50', 'border-amber-300');
-          speakWord(correct);
           const [r, c] = targetInput.dataset.key.split('-').map(Number);
           advanceNextInWord(r, c);
           checkWordRealtime(activeWord);
@@ -1909,9 +1868,6 @@ export function renderSopaLetrasActivity(container, data, onExit) {
                   <span class="font-black text-gray-800 group-hover:text-[#2470BB]">${w.word}</span>
                   <span class="text-[10px] text-gray-400 block">${w.translation}</span>
                 </div>
-                <button onclick="window.activitiesEngine.speak('${w.word}')" class="text-gray-300 hover:text-sky-500 text-xs p-1 cursor-pointer" title="Escuchar pronunciación">
-                  <i class="fa-solid fa-volume-high"></i>
-                </button>
               </div>
             `).join('')}
           </div>
@@ -2006,7 +1962,6 @@ export function renderSopaLetrasActivity(container, data, onExit) {
     if (matched) {
       foundWords.add(matched.word);
       if (typeof window.reportActivityProgress === 'function') window.reportActivityProgress('sopa_letras', true, foundWords.size === placedWords.length);
-      speakWord(matched.word);
 
       const colorClass = wordColors[foundWords.size % wordColors.length];
 
@@ -2255,7 +2210,6 @@ export function renderAhorcadoActivity(container, data, onExit) {
       if (isWon) {
         if (typeof window.reportActivityProgress === 'function') window.reportActivityProgress('ahorcado', true, currentWordIdx === words.length - 1);
         triggerConfetti();
-        speakWord(targetWord);
         setTimeout(() => {
           showRoundResult(true);
         }, 500);
@@ -2304,11 +2258,6 @@ export function renderAhorcadoActivity(container, data, onExit) {
           <h3 class="text-2xl font-bold text-gray-800">${won ? '¡Acertaste la Palabra!' : '¡Ahorcado!'}</h3>
           <p class="text-sm text-gray-500 mt-1">La palabra era: <b class="text-[#2470BB] text-base">${targetWord}</b></p>
         </div>
-
-        <button onclick="window.activitiesEngine.speak('${targetWord}')" class="px-4 py-2 bg-blue-50 text-[#2470BB] hover:bg-blue-100 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-volume-high"></i>
-          <span>Pronunciación en Inglés</span>
-        </button>
 
         <div class="flex flex-col sm:flex-row gap-3 pt-3">
           ${currentWordIdx < words.length - 1 ? `
@@ -2360,7 +2309,6 @@ export function renderAhorcadoActivity(container, data, onExit) {
 
 // Objeto global de integración
 export const activitiesEngine = {
-  speak: speakWord,
   confetti: triggerConfetti,
   renderFill: renderFillActivity,
   renderMemorama: renderMemoramaActivity,
