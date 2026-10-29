@@ -8,12 +8,33 @@ const API_BASE = (typeof window !== 'undefined' && window.location && window.loc
   ? '/api' 
   : 'http://localhost:3000/api';
 
+const STUDENT_PROFILE_KEY = 'singling_student_profile_id';
+const ADMIN_KEY_STORAGE = 'singling_admin_api_key';
+
+export function getStudentProfileId() {
+  let id = localStorage.getItem(STUDENT_PROFILE_KEY);
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(id || '')) {
+    const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID().replace(/-/g, '')
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    id = `student_${randomPart}`;
+    localStorage.setItem(STUDENT_PROFILE_KEY, id);
+  }
+  return id;
+}
+
+export function setAdminApiKey(key) {
+  if (key) sessionStorage.setItem(ADMIN_KEY_STORAGE, key.trim());
+  else sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+}
+
 // Helper genérico para peticiones fetch
 async function request(endpoint, options = {}) {
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...(sessionStorage.getItem(ADMIN_KEY_STORAGE) ? { 'X-Admin-Key': sessionStorage.getItem(ADMIN_KEY_STORAGE) } : {}),
         ...(options.headers || {})
       },
       ...options
@@ -132,6 +153,7 @@ export const api = {
       const params = new URLSearchParams();
       if (unidadId) params.append('unidadId', unidadId);
       if (usuarioId) params.append('usuarioId', usuarioId);
+      params.append('perfilId', getStudentProfileId());
       const res = await request(`/progreso?${params.toString()}`);
       if (res && typeof res.aciertos === 'number') {
         localStorage.setItem(key, JSON.stringify(res));
@@ -161,7 +183,7 @@ export const api = {
     try {
       const res = await request('/progreso/acierto', {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: JSON.stringify({ ...data, perfilId: data.perfilId || getStudentProfileId() })
       });
       if (res && res.success) {
         localStorage.setItem(key, JSON.stringify(res));

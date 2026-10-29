@@ -21,6 +21,9 @@
       </div>
     </div>
     <div class="flex items-center gap-4">
+      <button type="button" onclick="window.configureTeacherAccess()" title="Configurar acceso docente" class="p-2 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-xl text-xs font-bold transition">
+        <i class="fa-solid fa-key"></i><span class="sr-only">Configurar acceso docente</span>
+      </button>
       <a href="index.html" class="px-3.5 py-2 bg-sky-50 text-[#2470BB] hover:bg-[#2470BB] hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
         <i class="fa-solid fa-graduation-cap"></i>
         <span>Vista Estudiante</span>
@@ -535,10 +538,18 @@
 
   <!-- SCRIPT API REST Y LÓGICA DOCENTE CON POSTGRESQL -->
   <script type="module">
-    import { api, cleanDriveLink, initDbStatusBadge, optimizeAndCompressImage } from "./js/api.js";
+    import { api, cleanDriveLink, initDbStatusBadge, optimizeAndCompressImage, setAdminApiKey } from "./js/api.js";
 
     // Inicializar badge visual de PostgreSQL
     initDbStatusBadge();
+
+    // La clave solo se conserva durante esta sesión del navegador.
+    window.configureTeacherAccess = () => {
+      const key = prompt('Ingresa la clave del panel docente. Déjala vacía para cerrar esta sesión.');
+      if (key === null) return;
+      setAdminApiKey(key);
+      alert(key.trim() ? 'Acceso docente configurado para esta sesión.' : 'Acceso docente cerrado.');
+    };
 
     // Estado global de edición
     let currentEditingActivityId = null;
